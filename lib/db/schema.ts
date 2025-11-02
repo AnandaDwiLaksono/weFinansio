@@ -62,6 +62,7 @@ export const users = pgTable("users", {
     .default(sql`gen_random_uuid()`),
   email: varchar("email", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }),
+  passwordHash: varchar("password_hash", { length: 255 }), // nullable
   currencyCode: varchar("currency_code", { length: 3 })
     .default("IDR")
     .notNull(),

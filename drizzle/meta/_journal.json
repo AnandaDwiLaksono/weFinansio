@@ -8,6 +8,13 @@
       "when": 1761753621750,
       "tag": "0000_steep_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762060876184,
+      "tag": "0001_chilly_absorbing_man",
+      "breakpoints": true
     }
   ]
 }
