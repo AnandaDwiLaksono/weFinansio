@@ -3,9 +3,13 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq, isNull } from "drizzle-orm";
+
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { transactions, accounts, categories } from "@/lib/db/schema";
+import { BadRequestError, UnauthorizedError } from "@/lib/errors";
+import { handleApi } from "@/lib/http";
+import { parseJson } from "@/lib/validate";
 
 const TxSchema = z.object({
   accountId: z.uuid(),
@@ -16,10 +20,11 @@ const TxSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
-export async function GET() {
+// export async function GET() {
+export const GET = handleApi(async () => {
   const session = await getSession();
   const userId = session?.user.id;
-  if (!userId) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  if (!userId) throw new UnauthorizedError();
 
   const rows = await db
     .select()
@@ -27,18 +32,19 @@ export async function GET() {
     .where(eq(transactions.userId, userId))
     .orderBy(transactions.occurredAt);
   return NextResponse.json({ ok: true, data: rows });
-}
+});
 
-export async function POST(req: Request) {
+export const POST = handleApi(async (req: Request) => {
   const session = await getSession();
   const userId = session?.user.id;
-  if (!userId) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  if (!userId) throw new UnauthorizedError();
 
   let data;
   try {
-    data = TxSchema.parse(await req.json());
+    data = await parseJson(req, TxSchema);
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, message: "Validasi gagal", issues: e instanceof z.ZodError ? e.issues : undefined }, { status: 400 });
+    // return NextResponse.json({ ok: false, message: "Validasi gagal", issues: e instanceof z.ZodError ? e.issues : undefined }, { status: 400 });
+    throw new BadRequestError("Validasi gagal", e);
   }
 
   // === Validasi kepemilikan account
@@ -76,4 +82,4 @@ export async function POST(req: Request) {
     .returning({ id: transactions.id });
 
   return NextResponse.json({ ok: true, id: row?.id }, { status: 201 });
-}
+});
