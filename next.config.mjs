@@ -1,4 +1,3 @@
-import { Fallback } from "@radix-ui/react-avatar";
 import withPWA from "next-pwa";
 
 const withPWAFn = withPWA({

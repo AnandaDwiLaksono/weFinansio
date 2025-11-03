@@ -32,7 +32,7 @@ export async function flushTxQueue() {
         body: JSON.stringify(payload),
       });
       if (res.ok) await localforage.removeItem(k);
-    } catch (_) {
+    } catch {
       // tetap antre kalau gagal
     }
   }

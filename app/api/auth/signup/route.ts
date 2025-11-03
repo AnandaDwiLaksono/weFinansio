@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 
 const SignUpSchema = z.object({
   name: z.string().min(2).max(80),
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(8).max(128),
 });
 
@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     if (e && typeof e === 'object' && 'issues' in e) {
       return NextResponse.json({ ok: false, message: "Validasi gagal", issues: (e as z.ZodError).issues }, { status: 400 });
     }
+    console.error("Error during signup:", e);
     return NextResponse.json({ ok: false, message: "Gagal mendaftar" }, { status: 500 });
   }
 }
