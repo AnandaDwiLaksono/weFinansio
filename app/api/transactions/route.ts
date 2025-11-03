@@ -42,24 +42,24 @@ export async function POST(req: Request) {
   }
 
   // === Validasi kepemilikan account
-  const acc = await db.query.accounts.findFirst({
-    where: and(eq(accounts.id, data.accountId), eq(accounts.userId, userId)),
-    columns: { id: true },
-  });
-  if (!acc) {
-    return NextResponse.json({ ok: false, message: "Akun tidak ditemukan / bukan milik Anda" }, { status: 403 });
-  }
+  // const acc = await db.query.accounts.findFirst({
+  //   where: and(eq(accounts.id, data.accountId), eq(accounts.userId, userId)),
+  //   columns: { id: true },
+  // });
+  // if (!acc) {
+  //   return NextResponse.json({ ok: false, message: "Akun tidak ditemukan / bukan milik Anda" }, { status: 403 });
+  // }
 
   // === Validasi kepemilikan kategori (bila ada)
-  if (data.categoryId) {
-    const cat = await db.query.categories.findFirst({
-      where: and(eq(categories.id, data.categoryId), eq(categories.userId, userId)),
-      columns: { id: true },
-    });
-    if (!cat) {
-      return NextResponse.json({ ok: false, message: "Kategori tidak ditemukan / bukan milik Anda" }, { status: 403 });
-    }
-  }
+  // if (data.categoryId) {
+  //   const cat = await db.query.categories.findFirst({
+  //     where: and(eq(categories.id, data.categoryId), eq(categories.userId, userId)),
+  //     columns: { id: true },
+  //   });
+  //   if (!cat) {
+  //     return NextResponse.json({ ok: false, message: "Kategori tidak ditemukan / bukan milik Anda" }, { status: 403 });
+  //   }
+  // }
 
   const [row] = await db
     .insert(transactions)
