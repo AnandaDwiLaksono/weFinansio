@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     if (e && typeof e === 'object' && 'issues' in e) {
       return NextResponse.json({ ok: false, message: "Validasi gagal", issues: (e as z.ZodError).issues }, { status: 400 });
     }
+    console.error("Error during signup:", e);
     return NextResponse.json({ ok: false, message: "Gagal mendaftar" }, { status: 500 });
   }
 }
