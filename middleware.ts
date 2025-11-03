@@ -13,6 +13,6 @@ export const config = {
     "/portfolio/:path*",
     "/reports/:path*",
     "/settings/:path*",
-    "/api/(?!auth).*",           // proteksi semua API kecuali /api/auth/*
+    "/api/((?!auth).*)",           // proteksi semua API kecuali /api/auth/*
   ],
 };

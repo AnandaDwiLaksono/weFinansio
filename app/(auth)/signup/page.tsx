@@ -5,13 +5,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+import Image from "next/image";
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Image from "next/image";
-import { toast } from "sonner";
-// import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const FormSchema = z.object({
   name: z.string().min(2, "Minimal 2 karakter").max(80),
@@ -27,8 +28,11 @@ type FormValues = z.infer<typeof FormSchema>;
 
 export default function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors } } =
-    useForm<FormValues>({ resolver: zodResolver(FormSchema), mode: "onChange" });
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    mode: "onChange"
+  });
 
   const onSubmit = async (v: FormValues) => {
     setSubmitting(true);
@@ -105,7 +109,7 @@ export default function SignUpPage() {
 
             <p className="mt-4 text-center text-sm">
               Sudah punya akun?{" "}
-              <a className="text-primary hover:underline" href="/api/auth/signin">Masuk</a>
+              <Link href="/api/auth/signin" className="text-primary hover:underline">Masuk</Link>
             </p>
           </CardContent>
         </Card>
