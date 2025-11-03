@@ -16,7 +16,7 @@ import Link from "next/link";
 
 const FormSchema = z.object({
   name: z.string().min(2, "Minimal 2 karakter").max(80),
-  email: z.email("Email tidak valid"),
+  email: z.string().email("Email tidak valid"),
   password: z.string().min(8, "Minimal 8 karakter").max(128),
   confirm: z.string(),
 }).refine((d) => d.password === d.confirm, {
