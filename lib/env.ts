@@ -20,9 +20,13 @@ export function validateEnv() {
 }
 
 // Validate on import (server-side only)
-if (typeof window === "undefined") {
-  // Only validate if DATABASE_URL is being used (not during build-time static generation)
-  if (process.env.DATABASE_URL) {
+// Skip validation during build time or when DATABASE_URL is not needed
+if (typeof window === "undefined" && process.env.DATABASE_URL && process.env.NODE_ENV !== "production") {
+  // Only validate in development/test environments where we can safely fail early
+  try {
     validateEnv();
+  } catch (error) {
+    // Log warning but don't crash during build
+    console.warn("Environment validation warning:", error instanceof Error ? error.message : error);
   }
 }

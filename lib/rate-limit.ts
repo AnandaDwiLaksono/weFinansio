@@ -2,17 +2,15 @@ type Bucket = { tokens: number; lastRefill: number };
 
 const buckets = new Map<string, Bucket>();
 
-// Clean up old buckets periodically to prevent memory leak
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    const maxAge = 3600 * 1000; // 1 hour
-    for (const [key, bucket] of buckets.entries()) {
-      if (now - bucket.lastRefill > maxAge) {
-        buckets.delete(key);
-      }
+// Clean up old buckets on-demand to prevent memory leak
+function cleanupOldBuckets() {
+  const now = Date.now();
+  const maxAge = 3600 * 1000; // 1 hour
+  for (const [key, bucket] of buckets.entries()) {
+    if (now - bucket.lastRefill > maxAge) {
+      buckets.delete(key);
     }
-  }, 600000); // Clean up every 10 minutes
+  }
 }
 
 export function tokenBucketAllow({
@@ -20,6 +18,11 @@ export function tokenBucketAllow({
   capacity = 10,         // maksimum permintaan
   refillRate = 1,        // token per detik
 }: { key: string; capacity?: number; refillRate?: number }) {
+  // Clean up old buckets periodically (every 100 calls)
+  if (buckets.size > 100 && Math.random() < 0.01) {
+    cleanupOldBuckets();
+  }
+
   const now = Date.now();
   const b = buckets.get(key) ?? { tokens: capacity, lastRefill: now };
   // refill
