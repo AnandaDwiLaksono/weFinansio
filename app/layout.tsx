@@ -27,8 +27,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2F80ED" />
+        <meta name="description" content="weFinansio — catat transaksi, kelola anggaran, dan capai tujuan finansial." />
+        
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
