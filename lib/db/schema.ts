@@ -95,10 +95,10 @@ export const accounts = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    uqUserName: uniqueIndex("accounts_user_name_uq").on(t.userId, t.name),
-    idxUser: index("accounts_user_idx").on(t.userId),
-  }),
+  (t) => [
+    uniqueIndex("accounts_user_name_uq").on(t.userId, t.name),
+    index("accounts_user_idx").on(t.userId),
+  ],
 );
 
 export const categories = pgTable(
@@ -121,14 +121,14 @@ export const categories = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    uqPerUserNameKind: uniqueIndex("categories_user_name_kind_uq").on(
+  (t) => [
+    uniqueIndex("categories_user_name_kind_uq").on(
       t.userId,
       t.name,
       t.kind,
     ),
-    idxUser: index("categories_user_idx").on(t.userId),
-  }),
+    index("categories_user_idx").on(t.userId),
+  ],
 );
 
 export const transactions = pgTable(
@@ -169,18 +169,18 @@ export const transactions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    idxUserOccurred: index("transactions_user_occurred_idx").on(
+  (t) => [
+    index("transactions_user_occurred_idx").on(
       t.userId,
       t.occurredAt,
     ),
-    idxUserAccOccurred: index("transactions_user_acc_occurred_idx").on(
+    index("transactions_user_acc_occurred_idx").on(
       t.userId,
       t.accountId,
       t.occurredAt,
     ),
-    uqClientId: uniqueIndex("transactions_client_id_uq").on(t.clientId),
-  }),
+    uniqueIndex("transactions_client_id_uq").on(t.clientId),
+  ],
 );
 
 export const tags = pgTable(
@@ -194,9 +194,9 @@ export const tags = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 64 }).notNull(),
   },
-  (t) => ({
-    uqPerUserName: uniqueIndex("tags_user_name_uq").on(t.userId, t.name),
-  }),
+  (t) => [
+    uniqueIndex("tags_user_name_uq").on(t.userId, t.name),
+  ],
 );
 
 export const transactionTags = pgTable(
@@ -209,9 +209,9 @@ export const transactionTags = pgTable(
       .notNull()
       .references(() => tags.id, { onDelete: "cascade" }),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.transactionId, t.tagId], name: "transaction_tags_pk" }),
-  }),
+  (t) => [
+    primaryKey({ columns: [t.transactionId, t.tagId], name: "transaction_tags_pk" }),
+  ],
 );
 
 /* =========================
@@ -239,14 +239,14 @@ export const budgets = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    uqUserCatPeriod: uniqueIndex("budgets_user_cat_period_uq").on(
+  (t) => [
+    uniqueIndex("budgets_user_cat_period_uq").on(
       t.userId,
       t.categoryId,
       t.periodMonth,
     ),
-    idxUserPeriod: index("budgets_user_period_idx").on(t.userId, t.periodMonth),
-  }),
+    index("budgets_user_period_idx").on(t.userId, t.periodMonth),
+  ],
 );
 
 /* =========================
@@ -273,9 +273,9 @@ export const goals = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    idxUser: index("goals_user_idx").on(t.userId),
-  }),
+  (t) => [
+    index("goals_user_idx").on(t.userId),
+  ],
 );
 
 export const goalContributions = pgTable(
@@ -302,9 +302,9 @@ export const goalContributions = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => ({
-    idxGoalDate: index("goal_contrib_goal_date_idx").on(t.goalId, t.occurredAt),
-  }),
+  (t) => [
+    index("goal_contrib_goal_date_idx").on(t.goalId, t.occurredAt),
+  ],
 );
 
 /* =========================
@@ -338,10 +338,10 @@ export const holdings = pgTable(
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    uqUserSymbol: uniqueIndex("holdings_user_symbol_uq").on(t.userId, t.symbol),
-    idxUser: index("holdings_user_idx").on(t.userId),
-  }),
+  (t) => [
+    uniqueIndex("holdings_user_symbol_uq").on(t.userId, t.symbol),
+    index("holdings_user_idx").on(t.userId),
+  ],
 );
 
 export const portfolioTx = pgTable(
@@ -378,14 +378,14 @@ export const portfolioTx = pgTable(
     syncStatus: syncStatus("sync_status").notNull().default("synced"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => ({
-    idxUserSymbolDate: index("portfolio_tx_user_symbol_date_idx").on(
+  (t) => [
+    index("portfolio_tx_user_symbol_date_idx").on(
       t.userId,
       t.symbol,
       t.occurredAt,
     ),
-    uqClientId: uniqueIndex("portfolio_tx_client_id_uq").on(t.clientId),
-  }),
+    uniqueIndex("portfolio_tx_client_id_uq").on(t.clientId),
+  ],
 );
 
 export const assetPrices = pgTable(
@@ -397,9 +397,9 @@ export const assetPrices = pgTable(
     day: date("date").notNull(),
     close: numeric("close", { precision: 18, scale: 4 }).notNull(),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.symbol, t.day], name: "asset_prices_pk" }),
-  }),
+  (t) => [
+    primaryKey({ columns: [t.symbol, t.day], name: "asset_prices_pk" }),
+  ],
 );
 
 /* =========================

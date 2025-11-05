@@ -2,12 +2,12 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { transactions, accounts, categories } from "@/lib/db/schema";
-import { BadRequestError, UnauthorizedError } from "@/lib/errors";
+import { BadRequestError, ForbiddenError, UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 import { parseJson } from "@/lib/validate";
 
@@ -43,29 +43,31 @@ export const POST = handleApi(async (req: Request) => {
   try {
     data = await parseJson(req, TxSchema);
   } catch (e: unknown) {
-    // return NextResponse.json({ ok: false, message: "Validasi gagal", issues: e instanceof z.ZodError ? e.issues : undefined }, { status: 400 });
     throw new BadRequestError("Validasi gagal", e);
   }
 
   // === Validasi kepemilikan account
-  // const acc = await db.query.accounts.findFirst({
-  //   where: and(eq(accounts.id, data.accountId), eq(accounts.userId, userId)),
-  //   columns: { id: true },
-  // });
-  // if (!acc) {
-  //   return NextResponse.json({ ok: false, message: "Akun tidak ditemukan / bukan milik Anda" }, { status: 403 });
-  // }
+  const acc = await db.query.accounts.findFirst({
+    where: and(eq(accounts.id, data.accountId), eq(accounts.userId, userId)),
+    columns: { id: true },
+  });
+
+  if (!acc) {
+    // return NextResponse.json({ ok: false, message: "Akun tidak ditemukan / bukan milik Anda" }, { status: 403 });
+    throw new ForbiddenError("Akun tidak ditemukan / bukan milik Anda");
+  }
 
   // === Validasi kepemilikan kategori (bila ada)
-  // if (data.categoryId) {
-  //   const cat = await db.query.categories.findFirst({
-  //     where: and(eq(categories.id, data.categoryId), eq(categories.userId, userId)),
-  //     columns: { id: true },
-  //   });
-  //   if (!cat) {
-  //     return NextResponse.json({ ok: false, message: "Kategori tidak ditemukan / bukan milik Anda" }, { status: 403 });
-  //   }
-  // }
+  if (data.categoryId) {
+    const cat = await db.query.categories.findFirst({
+      where: and(eq(categories.id, data.categoryId), eq(categories.userId, userId)),
+      columns: { id: true },
+    });
+    if (!cat) {
+      // return NextResponse.json({ ok: false, message: "Kategori tidak ditemukan / bukan milik Anda" }, { status: 403 });
+      throw new ForbiddenError("Kategori tidak ditemukan / bukan milik Anda");
+    }
+  }
 
   const [row] = await db
     .insert(transactions)
