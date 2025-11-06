@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { and, eq, sql, gte, lt } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { accounts, transactions } from "@/lib/db/schema";
+import { accounts, transactions, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
@@ -17,8 +17,18 @@ function monthRange(d = new Date()) {
 
 export const GET = handleApi(async () => {
   const session = await getSession();
-  const userId = session?.user.id;
-  if (!userId) throw new UnauthorizedError();
+
+  let userId = session?.user.id;
+  // fallback cari userId dari email (mungkin terjadi kalau session lama sebelum perubahan)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
+    });
+    if (u) userId = u.id;
+  }
+
+  if (!userId) throw new UnauthorizedError("Session: " + JSON.stringify(session));
 
   const { start, end } = monthRange();
 

@@ -101,7 +101,7 @@ export default function SignUpPage() {
 
             <div className="mt-3">
               <Button variant="outline" className="w-full gap-2"
-                onClick={() => signIn("google", { callbackUrl: "/" })}>
+                onClick={() => signIn("google", { callbackUrl: "/", prompt: "select_account" })}>
                 <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} className="h-5 w-5" />
                 Daftar dengan Google
               </Button>

@@ -1,10 +1,10 @@
-// lib/react-query.tsx
 "use client";
 
 import { QueryClient, QueryClientProvider, useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
-import { api, apiFetch, ApiError } from "./api-client";
 import { toast } from "sonner";
+
+import { api, apiFetch, ApiError } from "./api-client";
 
 export function ReactQueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient({
@@ -29,12 +29,12 @@ export function ReactQueryProvider({ children }: { children: ReactNode }) {
 }
 
 /** Hook query yang otomatis handle ApiError + toast opsional */
-export function useApiQuery<TData, TError = ApiError>(
-  key: unknown[],
+export function useApiQuery<TData, TError = ApiError, TQueryKey extends readonly unknown[] = readonly unknown[]>(
+  key: TQueryKey,
   fetcher: () => Promise<TData>,
-  options?: UseQueryOptions<TData, TError>
+  options?: Omit<UseQueryOptions<TData, TError, TData, TQueryKey>, "queryKey" | "queryFn">
 ) {
-  return useQuery<TData, TError>({
+  return useQuery<TData, TError, TData, TQueryKey>({
     queryKey: key,
     queryFn: fetcher,
     ...options,

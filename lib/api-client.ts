@@ -49,6 +49,7 @@ export async function apiFetch<T>(url: string, opts: ApiFetchOptions = {}): Prom
       body: opts.body ? JSON.stringify(opts.body) : undefined,
       cache: opts.cache ?? "no-store",
       signal: controller.signal,
+      credentials: "include", // kirim cookie untuk session
     });
 
     const isJson = (res.headers.get("content-type") || "").includes("application/json");

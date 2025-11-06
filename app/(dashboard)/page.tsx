@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 import { useApiQuery, api } from "@/lib/react-query";
 import { Button } from "@/components/ui/button";
@@ -19,11 +21,20 @@ function formatIDR(v: string | number) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { status } = useSession(); // "loading" | "authenticated" | "unauthenticated"
+
   const { data, isLoading, error } = useApiQuery<SummaryRes>(
     ["summary"],
     () => api.get<SummaryRes>("/api/summary"),
-    // { staleTime: 30_000 }
+    { enabled: status === "authenticated", staleTime: 30_000 },
   );
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/signin");
+    }
+  }, [status, router]);
 
   const kpi = data?.kpi;
   const accounts = data?.accounts ?? [];
@@ -35,7 +46,8 @@ export default function DashboardPage() {
     return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   }, [kpi]);
 
-  if (isLoading) return <div className="p-6">Memuat dashboard…</div>;
+  if (status === "loading") return <div className="p-6">Memuat sesi…</div>;
+  if (isLoading && status === "authenticated") return <div className="p-6">Memuat dashboard…</div>;
   if (error) return <div className="p-6 text-red-500">Gagal memuat data</div>;
 
   return (
