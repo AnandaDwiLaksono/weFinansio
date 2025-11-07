@@ -1,14 +1,12 @@
 export const runtime = "nodejs";
 
-import { and, eq, sql, gte, lt } from "drizzle-orm";
-
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { accounts, transactions, users } from "@/lib/db/schema";
+import { accounts, transactions, categories, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 
-// helper batas bulan berjalan (local TZ sederhana)
 function monthRange(d = new Date()) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0);
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0);
@@ -17,9 +15,9 @@ function monthRange(d = new Date()) {
 
 export const GET = handleApi(async () => {
   const session = await getSession();
+  let userId = session?.user?.id;
 
-  let userId = session?.user.id;
-  // fallback cari userId dari email (mungkin terjadi kalau session lama sebelum perubahan)
+  // fallback by email (jaga-jaga)
   if (!userId && session?.user?.email) {
     const u = await db.query.users.findFirst({
       where: eq(users.email, session.user.email),
@@ -28,61 +26,24 @@ export const GET = handleApi(async () => {
     if (u) userId = u.id;
   }
 
-  if (!userId) throw new UnauthorizedError("Session: " + JSON.stringify(session));
+  if (!userId) throw new UnauthorizedError("No user id in session.");
 
   const { start, end } = monthRange();
 
-  // ============= KPI bulan berjalan =============
-  // income
-  const [incomeRow] = await db
-    .select({
-      total: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'income' THEN ${transactions.amount}::numeric ELSE 0 END), 0)::text`,
-    })
+  // income bulan ini
+  const [inc] = await db
+    .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'income' THEN ${transactions.amount} END), 0)::text` })
     .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        gte(transactions.occurredAt, start),
-        lt(transactions.occurredAt, end),
-      )
-    );
+    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lt(transactions.occurredAt, end)));
 
-  // expense
-  const [expenseRow] = await db
-    .select({
-      total: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount}::numeric ELSE 0 END), 0)::text`,
-    })
+  // expense bulan ini
+  const [exp] = await db
+    .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} END), 0)::text` })
     .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        gte(transactions.occurredAt, start),
-        lt(transactions.occurredAt, end),
-      )
-    );
+    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lt(transactions.occurredAt, end)));
 
-  // net = income - expense
-  const [netRow] = await db
-    .select({
-      total: sql<string>`
-        (
-          COALESCE(SUM(CASE WHEN ${transactions.type}='income' THEN ${transactions.amount}::numeric ELSE 0 END),0)
-        - COALESCE(SUM(CASE WHEN ${transactions.type}='expense' THEN ${transactions.amount}::numeric ELSE 0 END),0)
-        )::text
-      `,
-    })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        gte(transactions.occurredAt, start),
-        lt(transactions.occurredAt, end),
-      )
-    );
-
-  // ============= Saldo per akun (tanpa transfer) =============
-  // Kalau belum ada kolom opening balance, saldo = sum(income) - sum(expense)
-  const accountBalances = await db
+  // saldo akun (balance)
+  const [bal] = await db
     .select({
       id: accounts.id,
       name: accounts.name,
@@ -101,31 +62,33 @@ export const GET = handleApi(async () => {
     })
     .from(accounts)
     .where(eq(accounts.userId, userId));
+    // .select({ total: sql<string>`COALESCE(SUM(${accounts.balance}), 0)::text` })
+    // .from(accounts)
+    // .where(eq(accounts.userId, userId));
 
-  // ============= 10 transaksi terakhir (semua tipe, exclude transfer jika mau) =============
+  // transaksi terbaru
   const recent = await db
     .select({
       id: transactions.id,
-      type: transactions.type,
-      amount: transactions.amount,
-      note: transactions.note,
       occurredAt: transactions.occurredAt,
-      accountId: transactions.accountId,
-      categoryId: transactions.categoryId,
+      amount: sql<string>`${transactions.amount}::text`,
+      type: transactions.type,
+      accountName: accounts.name,
+      categoryName: categories.name,
+      // notes: transactions.notes,
     })
     .from(transactions)
+    .leftJoin(accounts, eq(transactions.accountId, accounts.id))
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(eq(transactions.userId, userId))
-    .orderBy(sql`${transactions.occurredAt} DESC`)
-    .limit(10);
+    .orderBy(sql`occurred_at DESC`)
+    .limit(8);
 
   return {
-    kpi: {
-      monthIncome: incomeRow?.total ?? "0",
-      monthExpense: expenseRow?.total ?? "0",
-      monthNet: netRow?.total ?? "0",
-      range: { start, end },
-    },
-    accounts: accountBalances,
+    incomeMonth: inc?.total ?? "0",
+    expenseMonth: exp?.total ?? "0",
+    // balance: bal?.total ?? "0",
+    balance: bal,
     recent,
   };
 });

@@ -31,8 +31,23 @@ const withPWAFn = withPWA({
       },
     },
     // Google Fonts
-    { urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: "StaleWhileRevalidate", options:{cacheName:"google-fonts-stylesheets",cacheableResponse:{statuses:[0,200]}} },
-    { urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i, handler: "CacheFirst", options:{cacheName:"google-fonts-webfonts",cacheableResponse:{statuses:[0,200]},expiration:{maxEntries:30,maxAgeSeconds:31536000}} },
+    {
+      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+      handler: "StaleWhileRevalidate",
+      options:{
+        cacheName:"google-fonts-stylesheets",
+        cacheableResponse:{ statuses: [0, 200] }
+      }
+    },
+    {
+      urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+      handler: "CacheFirst",
+      options:{
+        cacheName: "google-fonts-webfonts",
+        cacheableResponse: { statuses: [0, 200] },
+        expiration: { maxEntries: 30, maxAgeSeconds: 31536000 }
+      }
+    },
     // === Background Sync untuk POST /api/transactions ===
     {
       urlPattern: ({ url, request }) =>
@@ -44,6 +59,17 @@ const withPWAFn = withPWA({
           options: { maxRetentionTime: 24 * 60 } // menit
         }
       }
+    },
+    // User Avatar from Google → CacheFirst
+    {
+      urlPattern: ({ request, url }) =>
+        request.destination === "image" && url.hostname === "lh3.googleusercontent.com",
+      handler: "CacheFirst",
+      options: {
+        cacheName: "avatar-google",
+        cacheableResponse: { statuses: [0, 200] },
+        expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
+      },
     },
   ],
 });
