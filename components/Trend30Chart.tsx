@@ -10,7 +10,7 @@ type Row = { date: string; income: number; expense: number; net: number };
 export default function Trend30Chart() {
   const { data, isLoading, error } = useApiQuery<Row[]>(
     ["trend30d"],
-    () => api.get("/api/analytics/trend30d"),
+    () => api.get("/api/summaries/analytics/trend30d"),
     { staleTime: 60_000 }
   );
 

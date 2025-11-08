@@ -26,8 +26,8 @@ type Summary = {
 
 export default function PortfolioPanel() {
   const { data, isLoading, error } = useApiQuery<Summary>(
-    ["portfolio-summary"],
-    () => api.get("/api/portfolio/summary"),
+    ["summaries-portofolio"],
+    () => api.get("/api/summaries/portofolio"),
     { staleTime: 60_000 }
   );
 
@@ -45,16 +45,16 @@ export default function PortfolioPanel() {
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
             <div className="text-muted-foreground">Nilai</div>
-            <div className="font-semibold">{rupiah(s.totalValue)}</div>
+            <div className="font-semibold">{rupiah(s?.totalValue)}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Modal</div>
-            <div className="font-semibold">{rupiah(s.totalCost)}</div>
+            <div className="font-semibold">{rupiah(s?.totalCost)}</div>
           </div>
           <div>
             <div className="text-muted-foreground">P/L</div>
-            <div className={`font-semibold ${s.totalPL >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {sign(s.totalPL)} {rupiah(Math.abs(s.totalPL))} ({pct(s.totalPLPct)})
+            <div className={`font-semibold ${s?.totalPL >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {sign(s?.totalPL)} {rupiah(Math.abs(s?.totalPL))} ({pct(s?.totalPLPct)})
             </div>
           </div>
         </div>
@@ -63,11 +63,11 @@ export default function PortfolioPanel() {
 
         {/* Top holdings */}
         <div className="space-y-2">
-          {s.top.length === 0 && (
+          {s?.top.length === 0 && (
             <div className="text-sm text-muted-foreground">Belum ada kepemilikan.</div>
           )}
 
-          {s.top.map(a => (
+          {s?.top.map(a => (
             <div key={a.assetId} className="flex items-center justify-between gap-3 py-1">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{a.symbol}</div>

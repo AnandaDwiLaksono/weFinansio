@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { transactions } from "@/lib/db/schema";
+import { transactions, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
@@ -12,8 +12,17 @@ function startOfDay(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.
 
 export const GET = handleApi(async () => {
   const session = await getSession();
-  const userId = session?.user?.id;
-  if (!userId) throw new UnauthorizedError("No user");
+    let userId = session?.user?.id;
+    // fallback by email (jaga-jaga)
+    if (!userId && session?.user?.email) {
+      const u = await db.query.users.findFirst({
+        where: eq(users.email, session.user.email),
+        columns: { id: true },
+      });
+      if (u) userId = u.id;
+    }
+  
+    if (!userId) throw new UnauthorizedError("No user");
 
   const end = startOfDay(new Date());
   const start = new Date(end);

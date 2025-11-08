@@ -10,7 +10,7 @@ type GoalRow = {
 export default function GoalsPanel() {
   const { data, isLoading, error } = useApiQuery<GoalRow[]>(
     ["goals-summary"],
-    () => api.get("/api/goals/summary"),
+    () => api.get("/api/summaries/goals") as Promise<GoalRow[]>,
     { staleTime: 30_000 }
   );
 

@@ -18,7 +18,7 @@ type BudgetRow = {
 export default function BudgetPanel() {
   const { data, isLoading, error } = useApiQuery<BudgetRow[]>(
     ["budget-summary"],
-    () => api.get("/api/budgets/summary"),
+    () => api.get("/api/summaries/budgets") as Promise<BudgetRow[]>,
     { staleTime: 30_000 }
   );
 

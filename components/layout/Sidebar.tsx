@@ -9,6 +9,7 @@ import Image from "next/image";
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transaksi", icon: ListPlus },
+  { href: "/portofolio", label: "Portofolio", icon: PieChart },
   { href: "/accounts", label: "Akun", icon: Wallet },
   { href: "/categories", label: "Kategori", icon: Layers },
   { href: "/budgets", label: "Budget", icon: PieChart },
