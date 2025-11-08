@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useApiMutation, useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ type Row = {
 
 type ListRes = { items: Row[]; page: number; limit: number; total: number };
 
-export default function TransactionsPage() {
+export default function TransactionsContent() {
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") || "");
@@ -54,7 +54,7 @@ export default function TransactionsPage() {
     "transactions", { page, limit, q, type, accountId, categoryId, dateFrom, dateTo, sort }
   ]), [page, limit, q, type, accountId, categoryId, dateFrom, dateTo, sort]);
 
-  const { data, isLoading, error } = useApiQuery<ListRes>(
+  const { data } = useApiQuery<ListRes>(
     queryKey,
     () => api.get(`/api/transactions?` + new URLSearchParams({
       page: String(page), limit: String(limit),
@@ -90,8 +90,7 @@ export default function TransactionsPage() {
   const pages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <Suspense fallback={<div className="space-y-6"><div className="h-32 bg-muted animate-pulse rounded" /></div>}>
-    {/* <div className="space-y-6"> */}
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Transaksi</h1>
@@ -262,8 +261,7 @@ export default function TransactionsPage() {
           <Plus className="h-5 w-5" />
         </Button>
       </div>
-    {/* </div> */}
-    </Suspense>
+    </div>
   );
 }
 
