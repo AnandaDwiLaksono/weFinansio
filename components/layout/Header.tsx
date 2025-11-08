@@ -9,6 +9,7 @@ import Sidebar from "./Sidebar";
 import AddTransactionModal from "@/components/AddTransactionModal";
 import AddAccountModal from "@/components/AddAccountModal";
 import { Menu } from "lucide-react";
+import TransferModal from "../TransferModal";
 
 export default function HeaderBar() {
   const { data } = useSession();
@@ -36,6 +37,7 @@ export default function HeaderBar() {
             categories={[]} 
             userId={data?.user?.id ?? ""} 
           />
+          <TransferModal />
           <AddAccountModal />
           <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: "/signin" })}>
             Keluar

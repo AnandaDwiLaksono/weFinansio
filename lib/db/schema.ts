@@ -131,57 +131,51 @@ export const categories = pgTable(
   ],
 );
 
-export const transactions = pgTable(
-  "transactions",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    accountId: uuid("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-
-    categoryId: uuid("category_id").references(() => categories.id, {
-      onDelete: "set null",
-    }),
-
-    type: txType("type").notNull(), // expense/income/transfer
-    amount: numeric("amount", { precision: 18, scale: 2 }).notNull(), // selalu positif
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    note: text("note"),
-
-    status: txStatus("status").notNull().default("cleared"),
-
-    transferToAccountId: uuid("transfer_to_account_id").references(
-      () => accounts.id,
-      { onDelete: "set null" },
-    ),
-    transferGroupId: uuid("transfer_group_id"),
-
-    clientId: varchar("client_id", { length: 40 }),
-    syncStatus: syncStatus("sync_status").notNull().default("synced"),
-
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    index("transactions_user_occurred_idx").on(
-      t.userId,
-      t.occurredAt,
-    ),
-    index("transactions_user_acc_occurred_idx").on(
-      t.userId,
-      t.accountId,
-      t.occurredAt,
-    ),
-    uniqueIndex("transactions_client_id_uq").on(t.clientId),
-  ],
-);
+export const transactions = pgTable("transactions", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  categoryId: uuid("category_id").references(() => categories.id, {
+    onDelete: "set null",
+  }),
+  type: txType("type").notNull(), // expense/income/transfer
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(), // selalu positif
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  note: text("note"),
+  status: txStatus("status").notNull().default("cleared"),
+  transferToAccountId: uuid("transfer_to_account_id").references(
+    () => accounts.id,
+    { onDelete: "set null" },
+  ),
+  transferGroupId: uuid("transfer_group_id"),
+  cleared: boolean("cleared").notNull().default(false),
+  reconciled: boolean("reconciled").notNull().default(false),
+  statementAt: timestamp("statement_at", { withTimezone: true }),
+  clientId: varchar("client_id", { length: 40 }),
+  syncStatus: syncStatus("sync_status").notNull().default("synced"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("transactions_user_occurred_idx").on(
+    t.userId,
+    t.occurredAt,
+  ),
+  index("transactions_user_acc_occurred_idx").on(
+    t.userId,
+    t.accountId,
+    t.occurredAt,
+  ),
+  index("transactions_transfer_group_idx").on(t.transferGroupId),
+  index("transactions_cleared_idx").on(t.cleared),
+  index("transactions_reconciled_idx").on(t.reconciled),
+  uniqueIndex("transactions_client_id_uq").on(t.clientId),
+]);
 
 export const tags = pgTable(
   "tags",

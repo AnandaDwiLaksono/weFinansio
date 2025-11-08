@@ -7,39 +7,44 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
 
-export default function AddAccountModal({ asChild=false, children }: { asChild?: boolean; children?: React.ReactNode }){
+export default function EditAccountModal({
+  id,
+  initial,
+  children,
+}: {
+  id: string;
+  initial: { name: string; type: "cash"|"bank"|"ewallet"|"investment"; currency: string; balance: number; note: string };
+  children: React.ReactNode;
+}){
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name:"", type:"cash", currency:"IDR", balance:"0", note:"" });
+  const [form, setForm] = useState({ ...initial, balance: String(initial.balance ?? 0) });
 
-  const create = useApiMutation<{id:string}, {
-    name: string;
-    type: string;
-    currency: string;
-    balance: number;
-    note: string | null;
-  }>(
-    (payload) => api.post("/api/accounts", payload),
-    { toastSuccess: "Akun dibuat", onSuccess: ()=> setOpen(false) }
+  const patch = useApiMutation<{ok:true}, { name: string; type: string; currency: string; balance: number; note: string | null }>(
+    (payload) => api.patch(`/api/accounts/${id}`, payload),
+    { toastSuccess: "Akun diperbarui", onSuccess: ()=> setOpen(false) }
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild={asChild}>
-        {children ?? <Button size="sm"><Plus className="h-4 w-4 mr-2" />Tambah Akun</Button>}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={(v)=>{ setOpen(v); if(v) setForm({ ...initial, balance: String(initial.balance??0) }); }}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Tambah Akun</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Edit Akun</DialogTitle></DialogHeader>
         <form
           onSubmit={(e)=>{ e.preventDefault();
             if(!form.name) return toast.error("Nama wajib diisi");
-            create.mutate({ name: form.name, type: form.type, currency: form.currency, balance: Number(form.balance||0), note: form.note||null });
+            patch.mutate({
+              name: form.name,
+              type: form.type,
+              currency: form.currency,
+              balance: Number(form.balance || 0),
+              note: form.note || null,
+            });
           }}
           className="grid gap-3"
         >
           <Input placeholder="Nama akun" value={form.name} onChange={e=>setForm(f=>({...f, name:e.target.value}))} />
-          <Select value={form.type} onValueChange={(v)=> setForm(f=>({...f, type:v}))}>
+          <Select value={form.type} onValueChange={(v)=> setForm(f=>({...f, type:v as "cash"|"bank"|"ewallet"|"investment"}))}>
             <SelectTrigger><SelectValue placeholder="Jenis akun" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="cash">Tunai</SelectItem>
@@ -49,13 +54,13 @@ export default function AddAccountModal({ asChild=false, children }: { asChild?:
             </SelectContent>
           </Select>
           <div className="grid grid-cols-2 gap-3">
-            <Input placeholder="Mata uang (IDR/USD…)" value={form.currency} onChange={e=>setForm(f=>({...f, currency:e.target.value.toUpperCase()}))} />
-            <Input placeholder="Saldo awal" value={form.balance} onChange={e=>setForm(f=>({...f, balance:e.target.value}))} />
+            <Input placeholder="Mata uang" value={form.currency} onChange={e=>setForm(f=>({...f, currency:e.target.value.toUpperCase()}))} />
+            <Input placeholder="Saldo" value={form.balance} onChange={e=>setForm(f=>({...f, balance:e.target.value}))} />
           </div>
           <Input placeholder="Catatan (opsional)" value={form.note} onChange={e=>setForm(f=>({...f, note:e.target.value}))} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={()=>setOpen(false)}>Batal</Button>
-            <Button type="submit" disabled={create.isPending}>Simpan</Button>
+            <Button type="submit" disabled={patch.isPending}>Simpan</Button>
           </div>
         </form>
       </DialogContent>
