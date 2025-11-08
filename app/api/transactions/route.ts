@@ -1,87 +1,140 @@
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
 
-import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { transactions, accounts, categories } from "@/lib/db/schema";
-import { BadRequestError, ForbiddenError, UnauthorizedError } from "@/lib/errors";
+import { transactions, accounts, categories, users } from "@/lib/db/schema";
+import { getSession } from "@/lib/auth";
+import { BadRequestError, UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 import { parseJson } from "@/lib/validate";
 
-const TxSchema = z.object({
-  accountId: z.uuid(),
-  categoryId: z.uuid().nullable().optional(),
-  type: z.enum(["expense", "income", "transfer"]),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
-  occurredAt: z.string().or(z.date()).transform((v) => new Date(v as string | Date)),
-  note: z.string().max(500).optional(),
+const ListQuery = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  sort: z.enum(["date_desc","date_asc","amount_desc","amount_asc"]).default("date_desc"),
+  q: z.string().optional(),
+  type: z.enum(["income","expense"]).optional(),
+  accountId: z.string().uuid().optional(),
+  categoryId: z.string().uuid().optional(),
+  dateFrom: z.string().optional(), // ISO
+  dateTo: z.string().optional(),   // ISO (inclusive)
 });
 
-// export async function GET() {
-export const GET = handleApi(async () => {
+const CreateBody = z.object({
+  occurredAt: z.string(),                // ISO
+  amount: z.number().positive(),
+  type: z.enum(["income","expense"]),
+  accountId: z.string().uuid(),
+  categoryId: z.string().uuid().nullable().optional(),
+  notes: z.string().max(200).nullable().optional(),
+});
+
+export const GET = handleApi(async (req: Request) => {
   const session = await getSession();
-  const userId = session?.user.id;
-  if (!userId) throw new UnauthorizedError();
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
+    });
+    if (u) userId = u.id;
+  }
+
+  if (!userId) throw new UnauthorizedError("No user");
+
+  const url = new URL(req.url);
+  const p = ListQuery.parse(Object.fromEntries(url.searchParams));
+
+  const where = [
+    eq(transactions.userId, userId),
+    p.type ? eq(transactions.type, p.type) : undefined,
+    p.accountId ? eq(transactions.accountId, p.accountId) : undefined,
+    p.categoryId ? eq(transactions.categoryId, p.categoryId) : undefined,
+    p.dateFrom ? gte(transactions.occurredAt, new Date(p.dateFrom)) : undefined,
+    p.dateTo ? lte(transactions.occurredAt, new Date(p.dateTo)) : undefined,
+    p.q ? or(
+      ilike(transactions.note, `%${p.q}%`),
+      ilike(accounts.name, `%${p.q}%`),
+      ilike(categories.name, `%${p.q}%`)
+    ) : undefined,
+  ].filter(Boolean);
+
+  const order =
+    p.sort === "date_asc" ? transactions.occurredAt :
+    p.sort === "amount_desc" ? desc(transactions.amount) :
+    p.sort === "amount_asc" ? transactions.amount :
+    desc(transactions.occurredAt);
+
+  const offset = (p.page - 1) * p.limit;
 
   const rows = await db
-    .select()
+    .select({
+      id: transactions.id,
+      occurredAt: transactions.occurredAt,
+      amount: sql<string>`${transactions.amount}::text`,
+      type: transactions.type,
+      notes: transactions.note,
+      accountId: transactions.accountId,
+      categoryId: transactions.categoryId,
+      accountName: accounts.name,
+      categoryName: categories.name,
+    })
     .from(transactions)
-    .where(eq(transactions.userId, userId))
-    .orderBy(transactions.occurredAt);
-  return NextResponse.json({ ok: true, data: rows });
+    .leftJoin(accounts, eq(accounts.id, transactions.accountId))
+    .leftJoin(categories, eq(categories.id, transactions.categoryId))
+    .where(and(...where))
+    .orderBy(order)
+    .limit(p.limit)
+    .offset(offset);
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`COUNT(*)::int` })
+    .from(transactions)
+    .leftJoin(accounts, eq(accounts.id, transactions.accountId))
+    .leftJoin(categories, eq(categories.id, transactions.categoryId))
+    .where(and(...where));
+
+  return { items: rows, page: p.page, limit: p.limit, total };
 });
 
 export const POST = handleApi(async (req: Request) => {
   const session = await getSession();
-  const userId = session?.user.id;
-  if (!userId) throw new UnauthorizedError();
-
-  let data;
-  try {
-    data = await parseJson(req, TxSchema);
-  } catch (e: unknown) {
-    throw new BadRequestError("Validasi gagal", e);
-  }
-
-  // === Validasi kepemilikan account
-  const acc = await db.query.accounts.findFirst({
-    where: and(eq(accounts.id, data.accountId), eq(accounts.userId, userId)),
-    columns: { id: true },
-  });
-
-  if (!acc) {
-    // return NextResponse.json({ ok: false, message: "Akun tidak ditemukan / bukan milik Anda" }, { status: 403 });
-    throw new ForbiddenError("Akun tidak ditemukan / bukan milik Anda");
-  }
-
-  // === Validasi kepemilikan kategori (bila ada)
-  if (data.categoryId) {
-    const cat = await db.query.categories.findFirst({
-      where: and(eq(categories.id, data.categoryId), eq(categories.userId, userId)),
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
       columns: { id: true },
     });
-    if (!cat) {
-      // return NextResponse.json({ ok: false, message: "Kategori tidak ditemukan / bukan milik Anda" }, { status: 403 });
-      throw new ForbiddenError("Kategori tidak ditemukan / bukan milik Anda");
-    }
+    if (u) userId = u.id;
   }
 
-  const [row] = await db
-    .insert(transactions)
-    .values({
-      userId,
-      accountId: data.accountId,
-      categoryId: data.categoryId ?? null,
-      type: data.type,
-      amount: data.amount,
-      occurredAt: data.occurredAt,
-      note: data.note ?? null,
-      syncStatus: "synced",
-    })
-    .returning({ id: transactions.id });
+  if (!userId) throw new UnauthorizedError("No user");
 
-  return NextResponse.json({ ok: true, id: row?.id }, { status: 201 });
+  const body = await parseJson(req, CreateBody);
+  // validasi kepemilikan account/category
+  const [acc] = await db.select({ id: accounts.id }).from(accounts)
+    .where(and(eq(accounts.id, body.accountId), eq(accounts.userId, userId))).limit(1);
+  if (!acc) throw new BadRequestError("Akun tidak valid.");
+
+  if (body.categoryId) {
+    const [cat] = await db.select({ id: categories.id }).from(categories)
+      .where(and(eq(categories.id, body.categoryId), eq(categories.userId, userId))).limit(1);
+    if (!cat) throw new BadRequestError("Kategori tidak valid.");
+  }
+
+  const [row] = await db.insert(transactions).values({
+    userId,
+    occurredAt: new Date(body.occurredAt),
+    amount: String(body.amount),
+    type: body.type,
+    accountId: body.accountId,
+    categoryId: body.categoryId ?? null,
+    note: body.notes ?? null,
+  }).returning({ id: transactions.id });
+
+  return { id: row?.id };
 });
