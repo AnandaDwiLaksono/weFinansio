@@ -15,6 +15,13 @@
       "when": 1762060876184,
       "tag": "0001_chilly_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762683272457,
+      "tag": "0002_military_silver_fox",
+      "breakpoints": true
     }
   ]
 }

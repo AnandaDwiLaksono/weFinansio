@@ -212,36 +212,30 @@ export const transactionTags = pgTable(
    Budgeting
 ========================= */
 
-export const budgets = pgTable(
-  "budgets",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
+export const budgets = pgTable("budgets", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  categoryId: uuid("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }),
+  periodMonth: date("period_month").notNull(), // gunakan tanggal 1 (YYYY-MM-01)
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
 
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    categoryId: uuid("category_id")
-      .notNull()
-      .references(() => categories.id, { onDelete: "cascade" }),
-
-    periodMonth: date("period_month").notNull(), // gunakan tanggal 1 (YYYY-MM-01)
-    amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    uniqueIndex("budgets_user_cat_period_uq").on(
-      t.userId,
-      t.categoryId,
-      t.periodMonth,
-    ),
-    index("budgets_user_period_idx").on(t.userId, t.periodMonth),
-  ],
-);
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+},
+(t) => [
+  uniqueIndex("budgets_user_cat_period_uq").on(
+    t.userId,
+    t.categoryId,
+    t.periodMonth,
+  ),
+  index("budgets_user_period_idx").on(t.userId, t.periodMonth),
+]);
 
 /* =========================
    Goals (tabungan/target)

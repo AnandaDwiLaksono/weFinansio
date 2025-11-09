@@ -81,6 +81,8 @@ export const GET = handleApi(async (req: Request) => {
       categoryId: transactions.categoryId,
       accountName: accounts.name,
       categoryName: categories.name,
+      categoryColor: categories.color,
+      categoryIcon: categories.icon,
     })
     .from(transactions)
     .leftJoin(accounts, eq(accounts.id, transactions.accountId))

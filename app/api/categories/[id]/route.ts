@@ -3,69 +3,81 @@ export const runtime = "nodejs";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { categories, transactions } from "@/lib/db/schema";
+import { categories, transactions, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
-import { ForbiddenError, NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
-import { parseJson } from "@/lib/validate";
+import { BadRequestError, NotFoundError, UnauthorizedError } from "@/lib/errors";
 
-const Update = z.object({
-  name: z.string().min(2).max(60).optional(),
-  kind: z.enum(["expense","income"]).optional(),
-  color: z.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i).nullable().optional(),
-  icon: z.string().max(40).nullable().optional(),
-});
-
-const DeleteBody = z.object({
-  mergeTo: z.string().uuid().optional(), // jika ingin relokasi transaksi ke kategori lain
+const UpdateBody = z.object({
+  name: z.string().min(1).max(60).optional(),
+  kind: z.enum(["income","expense"]).optional(),
+  color: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
+  icon: z.string().max(40).optional(),
 });
 
 export const PATCH = handleApi(async (req: Request) => {
   const session = await getSession();
-  const userId = session?.user.id;
-  if (!userId) throw new UnauthorizedError();
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
+    });
+    if (u) userId = u.id;
+  }
 
+  if (!userId) throw new UnauthorizedError("No user");
+  
   const id = req.url.split('/').pop()!;
-  const data = await parseJson(req, Update);
-  const cat = await db.query.categories.findFirst({
-    where: and(eq(categories.id, id), eq(categories.userId, userId)),
-    columns: { id:true }
-  });
-  if (!cat) throw new NotFoundError("Kategori tidak ditemukan.");
 
-  await db.update(categories).set({ ...data }).where(eq(categories.id, id));
+  const own = await db.query.categories.findFirst({
+    where: and(eq(categories.id, id), eq(categories.userId, userId)),
+    columns: { id: true }
+  });
+  if (!own) throw new NotFoundError("Kategori tidak ditemukan.");
+
+  const body = UpdateBody.parse(await req.json());
+  const hex = body.color ? (body.color.startsWith("#") ? body.color : `#${body.color}`) : undefined;
+
+  await db.update(categories).set({
+    name: body.name,
+    kind: body.kind,
+    color: hex,
+    icon: body.icon,
+  }).where(eq(categories.id, id));
+
   return { ok: true };
 });
-export const DELETE = handleApi(async (req: Request) => {
+
+export const DELETE = handleApi(async (_req: Request) => {
   const session = await getSession();
-  const userId = session?.user.id;
-  if (!userId) throw new UnauthorizedError();
-
-  const id = req.url.split('/').pop()!;
-  const cat = await db.query.categories.findFirst({
-    where: and(eq(categories.id, id), eq(categories.userId, userId)),
-    columns: { id:true, kind:true }
-  });
-  if (!cat) throw new NotFoundError("Kategori tidak ditemukan.");
-
-  const { mergeTo } = await parseJson(req, DeleteBody).catch(()=>({ mergeTo: undefined }));
-
-  if (mergeTo) {
-    // pindahkan transaksi ke kategori lain (pastikan milik user & kind sama)
-    const target = await db.query.categories.findFirst({
-      where: and(eq(categories.id, mergeTo), eq(categories.userId, userId)),
-      columns: { id:true, kind:true }
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
     });
-    if (!target || target.kind !== cat.kind) throw new ForbiddenError("Kategori tujuan tidak valid.");
-    await db.update(transactions).set({ categoryId: target.id }).where(eq(transactions.categoryId, id));
-  } else {
-    // jika tidak merge, hapus transaksi yang memakai kategori ini? (umumnya dilarang)
-    const used = await db.query.transactions.findFirst({
-      where: eq(transactions.categoryId, id),
-      columns: { id:true }
-    });
-    if (used) throw new ForbiddenError("Kategori masih dipakai transaksi. Gunakan mergeTo untuk memindahkan.");
+    if (u) userId = u.id;
   }
+
+  if (!userId) throw new UnauthorizedError("No user");
+
+  const id = _req.url.split('/').pop()!;
+
+  const own = await db.query.categories.findFirst({
+    where: and(eq(categories.id, id), eq(categories.userId, userId)),
+    columns: { id: true }
+  });
+  if (!own) throw new NotFoundError("Kategori tidak ditemukan.");
+
+  // cegah hapus jika dipakai transaksi
+  const used = await db.query.transactions.findFirst({
+    where: eq(transactions.categoryId, id),
+    columns: { id: true }
+  });
+  if (used) throw new BadRequestError("Kategori sedang dipakai transaksi. Pindahkan/hapus transaksi terlebih dahulu.");
 
   await db.delete(categories).where(eq(categories.id, id));
   return { ok: true };

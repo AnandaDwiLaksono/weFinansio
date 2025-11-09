@@ -14,6 +14,7 @@ import AddTransactionModal from "@/components/AddTransactionModal";
 import { Trash2, Pencil, Plus } from "lucide-react";
 import EditTransactionModal from "@/components/EditTransactionModal";
 import { thisMonthRange, thisWeekRange, thisYearRange } from "@/lib/date-ranges";
+import { getIconByName } from "@/lib/icons";
 
 type Row = {
   id: string;
@@ -25,6 +26,8 @@ type Row = {
   categoryId: string | null;
   accountName: string | null;
   categoryName: string | null;
+  categoryColor: string | null;
+  categoryIcon: string | null;
 };
 
 type ListRes = { items: Row[]; page: number; limit: number; total: number };
@@ -187,8 +190,24 @@ export default function TransactionsContent() {
             <TableBody>
               {items.map(t => (
                 <TableRow key={t.id}>
-                  <TableCell>{new Date(t.occurredAt).toLocaleString("id-ID")}</TableCell>
-                  <TableCell>{t.categoryName ?? (t.type==="income" ? "Pemasukan" : "Pengeluaran")}</TableCell>
+                  <TableCell>
+                    {new Date(t.occurredAt).toLocaleString("id-ID")}
+                  </TableCell>
+                  {/* <TableCell>
+                    {t.categoryName ?? (t.type==="income" ? "Pemasukan" : "Pengeluaran")}
+                  </TableCell> */}
+                  <TableCell>
+                    {(() => {
+                      const Icon = getIconByName(t.categoryIcon || "");
+                      return (
+                        <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium"
+                              style={{ backgroundColor: (t.categoryColor || "#eef2ff"), color:"#0f172a" }}>
+                          {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                          {t.categoryName ?? (t.type==="income"?"Pemasukan":"Pengeluaran")}
+                        </span>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>{t.accountName}</TableCell>
                   <TableCell className="max-w-[320px] truncate">{t.notes}</TableCell>
                   <TableCell className={`text-right font-semibold ${t.type==="income"?"text-emerald-600":"text-red-600"}`}>
@@ -220,7 +239,16 @@ export default function TransactionsContent() {
             <CardContent className="p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{t.categoryName ?? (t.type==="income" ? "Pemasukan" : "Pengeluaran")}</div>
+                  {/* <div className="text-sm font-medium truncate">
+                    {t.categoryName ?? (t.type==="income" ? "Pemasukan" : "Pengeluaran")}
+                  </div> */}
+                  <div className="text-sm font-medium truncate flex items-center gap-1">
+                    {(() => {
+                      const Icon = getIconByName(t.categoryIcon || "");
+                      return Icon ? <Icon className="h-4 w-4" /> : null;
+                    })()}
+                    {t.categoryName ?? (t.type==="income"?"Pemasukan":"Pengeluaran")}
+                  </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {new Date(t.occurredAt).toLocaleString("id-ID")} • {t.accountName}{t.notes ? ` • ${t.notes}` : ""}
                   </div>
