@@ -224,7 +224,7 @@ export const budgets = pgTable("budgets", {
     .references(() => categories.id, { onDelete: "cascade" }),
   periodMonth: date("period_month").notNull(), // gunakan tanggal 1 (YYYY-MM-01)
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-
+  carryover: boolean("carryover").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 },
