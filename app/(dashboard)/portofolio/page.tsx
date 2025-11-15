@@ -33,8 +33,8 @@ export default function PortfolioPage() {
     return arr;
   }, [data, sort]);
 
-  if (isLoading) return <div className="p-6">Memuat…</div>;
-  if (error)     return <div className="p-6 text-red-500">Gagal memuat</div>;
+  // if (isLoading) return <div className="p-6">Memuat…</div>;
+  // if (error)     return <div className="p-6 text-red-500">Gagal memuat</div>;
 
   const totalValue = sum(items.map(x=>x.value));
   const totalPL    = sum(items.map(x=>x.pl));
@@ -115,8 +115,8 @@ function PortfolioPLChart(){
   const { data, isLoading, error } = useApiQuery<{date:string; value:number; cost:number; pl:number; plPct:number}[]>(
     ["pl-daily"], () => api.get("/api/portfolio/pl-daily?days=90"), { staleTime: 60_000 }
   );
-  if (isLoading) return <Card><CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader><CardContent>Memuat…</CardContent></Card>;
-  if (error) return <Card><CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader><CardContent className="text-red-500">Gagal memuat</CardContent></Card>;
+  // if (isLoading) return <Card><CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader><CardContent>Memuat…</CardContent></Card>;
+  // if (error) return <Card><CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader><CardContent className="text-red-500">Gagal memuat</CardContent></Card>;
 
   return (
     <Card>

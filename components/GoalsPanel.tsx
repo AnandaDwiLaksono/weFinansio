@@ -4,7 +4,16 @@ import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type GoalRow = {
-  id: string; name: string; target: number; saved: number; savedThisMonth: number; pct: number; dueDate: string | null;
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+  savedThisMonth: number;
+  pct: number;
+  dueDate?: string | null;
+  progress: number;
+  remaining: number;
+  color?: string | null;
 };
 
 export default function GoalsPanel() {

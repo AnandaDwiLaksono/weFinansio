@@ -12,6 +12,7 @@ import GoalsPanel from "@/components/GoalsPanel";
 import Trend30Chart from "@/components/Trend30Chart";
 import FabAdd from "@/components/FabAdd";
 import PortfolioPanel from "@/components/PortofolioPanel";
+import Link from "next/link";
 
 type SummaryRes = {
   incomeMonth: string;   // decimal string
@@ -26,6 +27,17 @@ type SummaryRes = {
     notes: string | null;
     type: "income" | "expense";
   }>;
+};
+
+type GoalSummary = {
+  id:string;
+  name:string;
+  target:number;
+  saved:number;
+  progress:number;
+  remaining:number;
+  targetDate?:string|null;
+  color?:string|null;
 };
 
 export default function DashboardPage() {
@@ -101,6 +113,7 @@ export default function DashboardPage() {
           <PortfolioPanel />
           <BudgetPanel />
           <GoalsPanel />
+          {/* <GoalsSummaryPanel /> */}
         </div>
       </section>
 
@@ -138,6 +151,62 @@ function LoadingState() {
       <Skeleton className="h-24" />
       <Skeleton className="h-24" />
       <Skeleton className="h-24" />
+    </div>
+  );
+}
+
+function GoalsSummaryPanel() {
+  const { data: goalsData, isLoading: goalsLoading, error: goalsError } = useApiQuery<{items:GoalSummary[]}>(
+    ["goals-dashboard"],
+    () => api.get("/api/goals"),
+    { staleTime: 30_000 }
+  );
+
+  const items = (goalsData?.items ?? [])
+    .slice() // copy
+    .sort((a, b)=> (b.progress || 0) - (a.progress || 0))
+    .slice(0,3); // top 3
+
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Goals utama</CardTitle>
+        <Link href="/goals" className="text-xs text-primary hover:underline">
+          Lihat semua
+        </Link>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {goalsLoading && <div className="text-xs text-muted-foreground">Memuat goals…</div>}
+        {(!goalsLoading && items.length === 0) && (
+          <div className="text-xs text-muted-foreground">Belum ada goal. Tambahkan dulu di menu Goals.</div>
+        )}
+        {items.map(g => (
+          <div key={g.id} className="flex items-center gap-3">
+            <MiniRing progress={g.progress} color={g.color || "#3b82f6"} />
+            <div className="min-w-0">
+              <div className="text-sm font-medium truncate">{g.name}</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {rupiah(g.saved)} / {rupiah(g.target)} • {Math.round((g.progress||0)*100)}%
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MiniRing({ progress, color }: { progress:number; color:string }) {
+  const pct = Math.round((progress || 0) * 100);
+  return (
+    <div className="relative h-10 w-10">
+      <div
+        className="h-10 w-10 rounded-full"
+        style={{ background: `conic-gradient(${color} ${pct}%, #e5e7eb ${pct}%)` }}
+      />
+      <div className="absolute inset-[6px] bg-background rounded-full grid place-items-center">
+        <span className="text-[10px] font-medium">{pct}%</span>
+      </div>
     </div>
   );
 }

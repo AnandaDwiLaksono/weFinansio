@@ -241,59 +241,54 @@ export const budgets = pgTable("budgets", {
    Goals (tabungan/target)
 ========================= */
 
-export const goals = pgTable(
-  "goals",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
+export const goals = pgTable("goals", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  targetAmount: numeric("target_amount", { precision: 18, scale: 2 })
+    .notNull(),
+  targetDate: date("target_date"),
+  startAmount: numeric("start_amount", { precision: 18, scale: 2 })
+    .notNull()
+    .default("0"),
+  note: text("note"),
+  color: varchar("color", { length: 7 }),
+  icon: varchar("icon", { length: 40 }),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+}, (t) => [
+  index("goals_user_idx").on(t.userId),
+]);
 
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    name: varchar("name", { length: 160 }).notNull(),
-    targetAmount: numeric("target_amount", { precision: 18, scale: 2 }).notNull(),
-    targetDate: date("target_date"),
-    note: text("note"),
-
-    archived: boolean("archived").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    index("goals_user_idx").on(t.userId),
-  ],
-);
-
-export const goalContributions = pgTable(
-  "goal_contributions",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-
-    goalId: uuid("goal_id")
-      .notNull()
-      .references(() => goals.id, { onDelete: "cascade" }),
-
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    transactionId: uuid("transaction_id").references(() => transactions.id, {
-      onDelete: "set null",
-    }),
-
-    amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-    occurredAt: timestamp("occurred_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => [
-    index("goal_contrib_goal_date_idx").on(t.goalId, t.occurredAt),
-  ],
-);
+export const goalContributions = pgTable("goal_contributions", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  goalId: uuid("goal_id")
+    .notNull()
+    .references(() => goals.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  transactionId: uuid("transaction_id")
+    .references(() => transactions.id, { onDelete: "set null" }),
+  amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  note: text("note"),
+}, (t) => [
+  index("goal_contrib_goal_date_idx").on(t.goalId, t.occurredAt),
+]);
 
 /* =========================
    Investasi / Portofolio
