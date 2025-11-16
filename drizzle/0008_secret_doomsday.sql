@@ -1,0 +1,5 @@
+-- ALTER TABLE "assets_master" DROP CONSTRAINT "assets_master_id_unique";--> statement-breakpoint
+-- ALTER TABLE "portfolio_tx" DROP CONSTRAINT "portfolio_tx_asset_id_assets_master_id_fk";
+--> statement-breakpoint
+-- ALTER TABLE "assets_master" DROP COLUMN "id";--> statement-breakpoint
+-- ALTER TABLE "portfolio_tx" DROP COLUMN "asset_id";

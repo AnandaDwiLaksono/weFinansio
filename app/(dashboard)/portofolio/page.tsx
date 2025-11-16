@@ -1,147 +1,258 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useApiQuery, api } from "@/lib/react-query";
-import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
-
+import { useState } from "react";
+import { useApiQuery, useApiMutation, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
-import Sparkline from "@/components/Sparkline";
-import ImportPortfolioCsv from "@/components/TxImport";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Plus } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
+// import AddPortfolioAssetModal from "@/components/AddPortfolioAssetModal";
+// import AddPortfolioTradeModal from "@/components/AddPortfolioTradeModal";
 
-type Holding = {
-  assetId: string; symbol: string; name: string;
-  qty: number; lastPrice: number; avgPrice: number;
-  value: number; cost: number; pl: number; plPct: number;
+type AssetRow = {
+  id:string; symbol:string; name:string;
+  type:"stock"|"crypto"|"fund"|"cash"|"other";
+  currency:string;
+  quantity:number; avgPrice:number; lastPrice:number;
+  cost:number; marketValue:number; pnl:number;
 };
 
+type AssetsRes = { items: AssetRow[]; total:{marketValue:number; pnl:number} };
+
+type Trade = {
+  id: string;
+  tradeDate: string;
+  side: "buy" | "sell" | string;
+  quantity: number;
+  price: number;
+};
+
+type TradesRes = { items: Trade[] };
+
 export default function PortfolioPage() {
-  const { data, isLoading, error } = useApiQuery<Holding[]>(
-    ["holdings"], () => api.get("/api/portofolio/holdings"), { staleTime: 30_000 }
+  const [q, setQ] = useState("");
+  const { data, refetch } = useApiQuery<AssetsRes>(
+    ["portfolio-assets", q],
+    () => api.get("/api/portfolio/assets?" + new URLSearchParams({ q })),
+    { staleTime: 10_000 }
   );
-
-  const [sort, setSort] = useState<{key:keyof Holding; dir: "asc"|"desc"}>({ key: "value", dir: "desc" });
-  const items = useMemo(() => {
-    const arr = [...(data ?? [])];
-    arr.sort((a,b) => {
-      const k = sort.key; const d = sort.dir === "asc" ? 1 : -1;
-      return (a[k] as string | number) > (b[k] as string | number) ? d : -d;
-    });
-    return arr;
-  }, [data, sort]);
-
-  // if (isLoading) return <div className="p-6">Memuat…</div>;
-  // if (error)     return <div className="p-6 text-red-500">Gagal memuat</div>;
-
-  const totalValue = sum(items.map(x=>x.value));
-  const totalPL    = sum(items.map(x=>x.pl));
+  const assets = data?.items ?? [];
+  const total = data?.total ?? { marketValue: 0, pnl: 0 };
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
+      {/* header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Portfolio</h1>
-          <p className="text-sm text-muted-foreground">Nilai: {rupiah(totalValue)} • P/L: <span className={totalPL>=0?"text-emerald-600":"text-red-600"}>{sign(totalPL)} {rupiah(Math.abs(totalPL))}</span></p>
+          <p className="text-sm text-muted-foreground">
+            Pantau aset, transaksi, dan keuntungan/kerugian portofoliomu.
+          </p>
         </div>
-        <ImportPortfolioCsv />
+        <div className="flex gap-2">
+          {/* <AddPortfolioAssetModal onSaved={refetch} /> */}
+        </div>
       </div>
 
+      {/* ringkasan */}
       <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Holdings</CardTitle>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Sortir: {label(sort.key)} ({sort.dir}) <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {(["value","pl","plPct","qty","symbol"] as (keyof Holding)[]).map(k=>(
-                <DropdownMenuItem key={k} onClick={()=> setSort(s=>({ key:k, dir: s.key===k && s.dir==="desc" ? "asc":"desc" }))}>
-                  {label(k)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aset</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Harga</TableHead>
-                <TableHead className="text-right">Nilai</TableHead>
-                <TableHead className="text-right">P/L</TableHead>
-                <TableHead className="text-right">Trend</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((x)=>(
-                <TableRow key={x.assetId}>
-                  <TableCell>
-                    <div className="font-medium">{x.symbol}</div>
-                    <div className="text-xs text-muted-foreground">{x.name}</div>
-                  </TableCell>
-                  <TableCell className="text-right">{format(x.qty)}</TableCell>
-                  <TableCell className="text-right">{rupiah(x.lastPrice)}</TableCell>
-                  <TableCell className="text-right">{rupiah(x.value)}</TableCell>
-                  <TableCell className={`text-right ${x.pl>=0?"text-emerald-600":"text-red-600"}`}>
-                    {sign(x.pl)} {rupiah(Math.abs(x.pl))} ({Math.round((x.plPct||0)*100)}%)
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Sparkline data={[]} />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {items.length===0 && (
-                <TableRow><TableCell colSpan={6} className="p-6 text-sm text-muted-foreground">Belum ada holdings.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-4 grid gap-3 sm:grid-cols-3">
+          <div>
+            <div className="text-xs text-muted-foreground">Nilai pasar total</div>
+            <div className="text-lg font-semibold">{rupiah(total.marketValue)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">P/L total</div>
+            <div className={"text-lg font-semibold " + (total.pnl >= 0 ? "text-emerald-600" : "text-red-600")}>
+              {rupiah(total.pnl)}
+            </div>
+          </div>
+          <div className="flex items-end justify-end">
+            {/* <AddPortfolioTradeModal onSaved={refetch} /> */}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Grafik P/L harian total */}
-      <PortfolioPLChart />
+      {/* layout 2 kolom: daftar aset + detail/sparkline */}
+      <div className="grid gap-4 lg:grid-cols-[2fr,1.5fr]">
+        {/* tabel aset */}
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-2 flex items-center justify-between">
+            <CardTitle className="text-base">Daftar Aset</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="px-4 pb-3">
+              <Input
+                placeholder="Cari simbol atau nama aset…"
+                value={q}
+                onChange={(e)=> setQ(e.target.value)}
+              />
+            </div>
+            <Separator />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aset</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Avg</TableHead>
+                  <TableHead className="text-right">Last</TableHead>
+                  <TableHead className="text-right">Nilai</TableHead>
+                  <TableHead className="text-right">P/L</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assets.map((a) => (
+                  <TableRow
+                    key={a.id}
+                    className={selectedAssetId === a.id ? "bg-muted/40 cursor-pointer" : "cursor-pointer"}
+                    onClick={() => setSelectedAssetId(a.id)}
+                  >
+                    <TableCell className="text-xs">
+                      <div className="font-medium">{a.symbol}</div>
+                      <div className="text-muted-foreground text-[11px] truncate">
+                        {a.name} • {a.type} • {a.currency}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-xs">{formatQty(a.quantity)}</TableCell>
+                    <TableCell className="text-right text-xs">{rupiah(a.avgPrice)}</TableCell>
+                    <TableCell className="text-right text-xs">{rupiah(a.lastPrice)}</TableCell>
+                    <TableCell className="text-right text-xs">{rupiah(a.marketValue)}</TableCell>
+                    <TableCell
+                      className={
+                        "text-right text-xs " + (a.pnl >= 0 ? "text-emerald-600" : "text-red-600")
+                      }
+                    >
+                      {rupiah(a.pnl)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {assets.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-4 text-xs text-muted-foreground text-center">
+                      Belum ada aset. Tambahkan dulu.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* detail asset: sparkline + transaksi */}
+        <PortfolioDetailPanel assetId={selectedAssetId} />
+      </div>
     </div>
   );
 }
 
-function PortfolioPLChart(){
-  const { data, isLoading, error } = useApiQuery<{date:string; value:number; cost:number; pl:number; plPct:number}[]>(
-    ["pl-daily"], () => api.get("/api/portfolio/pl-daily?days=90"), { staleTime: 60_000 }
+function PortfolioDetailPanel({ assetId }: { assetId: string | null }) {
+  const { data: tradesData } = useApiQuery<TradesRes>(
+    ["portfolio-trades", assetId],
+    () => api.get("/api/portfolio/trades?" + new URLSearchParams({ assetId: assetId || "" })),
+    { enabled: !!assetId }
   );
-  // if (isLoading) return <Card><CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader><CardContent>Memuat…</CardContent></Card>;
-  // if (error) return <Card><CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader><CardContent className="text-red-500">Gagal memuat</CardContent></Card>;
+
+  const { data: spark } = useApiQuery<{ points:{date:string; value:number}[] }>(
+    ["portfolio-spark", assetId],
+    () => api.get("/api/portfolio/holding-sparkline?" + new URLSearchParams({ assetId: assetId! })),
+    { enabled: !!assetId }
+  );
+
+  if (!assetId) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          Pilih aset di daftar untuk melihat detail & grafik.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const trades = tradesData?.items ?? [];
+  const points = spark?.points ?? [];
 
   return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-base">P/L Harian (90 hari)</CardTitle></CardHeader>
-      <CardContent className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data ?? []} margin={{ left:8, right:8, top:8, bottom:0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tick={{ fontSize:11 }} minTickGap={24} />
-            <YAxis tickFormatter={(v:number)=>short(v)} width={60} />
-            <Tooltip formatter={(v:number)=>rupiah(Number(v))} />
-            <Area type="monotone" dataKey="value" fillOpacity={0.15} />
-            <Area type="monotone" dataKey="pl" fillOpacity={0.25} />
-          </AreaChart>
-        </ResponsiveContainer>
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Detail Aset</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="h-40">
+          {points.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Belum ada histori nilai.</div>
+          ) : (
+            <ResponsiveContainer>
+              <LineChart data={points}>
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(d) => new Date(d).toLocaleDateString("id-ID", { month: "short", day: "numeric" })}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip
+                  formatter={(v: number | string | (number | string)[] | null | undefined) => {
+                    const val = Array.isArray(v) ? v[0] : v;
+                    return rupiah(Number(val ?? 0));
+                  }}
+                  labelFormatter={(d: string | number) => new Date(d).toLocaleString("id-ID")}
+                />
+                <Line type="monotone" dataKey="value" dot={false} strokeWidth={1.5} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div>
+          <div className="text-xs font-medium mb-1">Transaksi terbaru</div>
+          <div className="max-h-52 overflow-auto border rounded">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Side</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Harga</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {trades.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="text-[11px]">
+                      {new Date(t.tradeDate).toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="text-[11px]">{t.side}</TableCell>
+                    <TableCell className="text-[11px] text-right">
+                      {formatQty(t.quantity)}
+                    </TableCell>
+                    <TableCell className="text-[11px] text-right">
+                      {rupiah(t.price)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {trades.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-xs text-muted-foreground text-center py-3">
+                      Belum ada transaksi.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function sum(a:number[]){ return a.reduce((s,x)=>s+x,0); }
-function rupiah(n:number){ return new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n||0); }
-function format(n:number){ return new Intl.NumberFormat("id-ID").format(n||0); }
-function short(n:number){ if(Math.abs(n)>=1_000_000) return `${Math.round(n/1_000_000)}jt`; if(Math.abs(n)>=1_000) return `${Math.round(n/1_000)}rb`; return String(n); }
-function label(k:keyof Holding){
-  switch(k){ case "value":return "Nilai"; case "pl":return "P/L"; case "plPct":return "P/L %"; case "qty":return "Qty"; case "symbol":return "Aset"; default:return String(k); }
+function rupiah(n:number){
+  return new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n||0);
 }
-function sign(x:number){ return x>=0?"+":"-"; }
+function formatQty(n:number){
+  if (Math.abs(n) >= 1) return n.toLocaleString("id-ID",{maximumFractionDigits:2});
+  return n.toFixed(4);
+}

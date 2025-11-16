@@ -23,17 +23,17 @@ type Row = { assetId: string; symbol: string; name: string|null; qty: string; av
 
 export const GET = handleApi(async () => {
   const session = await getSession();
-    let userId = session?.user?.id;
-    // fallback by email (jaga-jaga)
-    if (!userId && session?.user?.email) {
-      const u = await db.query.users.findFirst({
-        where: eq(users.email, session.user.email),
-        columns: { id: true },
-      });
-      if (u) userId = u.id;
-    }
-  
-    if (!userId) throw new UnauthorizedError("No user");
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
+    });
+    if (u) userId = u.id;
+  }
+
+  if (!userId) throw new UnauthorizedError("No user");
 
   const rows = await db.execute<Row>(sql`
     SELECT
