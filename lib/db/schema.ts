@@ -212,6 +212,32 @@ export const transactionTags = pgTable(
   ],
 );
 
+export const userSettings = pgTable("user_settings", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  baseCurrency: char("base_currency", { length: 3 })
+    .notNull()
+    .default("IDR"),
+  defaultIncomeCategoryId: uuid("default_income_category_id")
+    .references(() => categories.id),
+  defaultExpenseCategoryId: uuid("default_expense_category_id")
+    .references(() => categories.id),
+  offlineMode: text("offline_mode")
+    .notNull()
+    .default("full"), // "minimal" | "full"
+  pwaHintsDismissed: timestamp("pwa_hints_dismissed", { withTimezone:true }),
+  createdAt: timestamp("created_at", { withTimezone:true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone:true })
+    .notNull()
+    .defaultNow(),
+}, (t) => [
+  uniqueIndex("user_settings_user_id_uq").on(t.userId),
+]);
+
+
 /* =========================
    Budgeting
 ========================= */

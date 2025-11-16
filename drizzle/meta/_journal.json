@@ -64,6 +64,20 @@
       "when": 1763220945093,
       "tag": "0008_secret_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1763278883227,
+      "tag": "0009_fast_speed",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1763278952660,
+      "tag": "0010_soft_fantastic_four",
+      "breakpoints": true
     }
   ]
 }
