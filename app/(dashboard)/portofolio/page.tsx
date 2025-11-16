@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Plus } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-// import AddPortfolioAssetModal from "@/components/AddPortfolioAssetModal";
-// import AddPortfolioTradeModal from "@/components/AddPortfolioTradeModal";
+import AddPortofolioAssetModal from "@/components/AddPortofolioAssetModal";
+import AddPortofolioTradeModal from "@/components/AddPortofolioTradeModal";
 
 type AssetRow = {
   id:string; symbol:string; name:string;
@@ -54,7 +54,7 @@ export default function PortfolioPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {/* <AddPortfolioAssetModal onSaved={refetch} /> */}
+          <AddPortofolioAssetModal onSaved={refetch} />
         </div>
       </div>
 
@@ -72,7 +72,7 @@ export default function PortfolioPage() {
             </div>
           </div>
           <div className="flex items-end justify-end">
-            {/* <AddPortfolioTradeModal onSaved={refetch} /> */}
+            <AddPortofolioTradeModal onSaved={refetch} />
           </div>
         </CardContent>
       </Card>

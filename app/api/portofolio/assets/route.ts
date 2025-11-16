@@ -7,9 +7,17 @@ import { assetsMaster, portfolioTx, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { UnauthorizedError } from "@/lib/errors";
+import { convertToBase, getFxMap, getUserBaseCurrency } from "@/lib/fx";
 
 const Q = z.object({
   q: z.string().optional(),
+});
+
+const CreateBody = z.object({
+  symbol: z.string().min(1),
+  name: z.string().min(1),
+  type: z.enum(["stock","crypto","mutual_fund","cash","other"]),
+  currency: z.string().length(3),
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -66,6 +74,8 @@ export const GET = handleApi(async (req: Request) => {
     map.set(t.assetId, rec);
   }
 
+  const base = await getUserBaseCurrency(userId);
+
   const rows = await db
     .select({
       symbol: assetsMaster.symbol,
@@ -87,13 +97,19 @@ export const GET = handleApi(async (req: Request) => {
     );
   });
 
+  // FX map
+  const ccys = filtered.map((a) => a.currency);
+  const fxMap = await getFxMap(userId, ccys, base);
+
   const items = filtered.map((a) => {
     const pos = map.get(a.symbol) ?? { qty: 0, cost: 0, lastPrice: null };
     const quantity = pos.qty;
     const cost = pos.cost;
     const lastPrice = pos.lastPrice ?? 0;
-    const marketValue = quantity * lastPrice;
-    const pnl = marketValue - cost;
+    const rawMarketValue = quantity * lastPrice;
+    const rawPnl = rawMarketValue - cost;
+    const marketValue = convertToBase(rawMarketValue, a.currency, fxMap, base);
+    const pnl = convertToBase(rawPnl, a.currency, fxMap, base);
     const avgPrice = quantity !== 0 ? cost / quantity : 0;
     return {
       ...a,
@@ -103,11 +119,38 @@ export const GET = handleApi(async (req: Request) => {
       lastPrice,
       marketValue,
       pnl,
+      baseCurrency: base,
     };
   });
 
   const totalMarketValue = items.reduce((s, i) => s + i.marketValue, 0);
   const totalPnl = items.reduce((s, i) => s + i.pnl, 0);
 
-  return { items, total: { marketValue: totalMarketValue, pnl: totalPnl } };
+  return { baseCurrency: base, items, total: { marketValue: totalMarketValue, pnl: totalPnl } };
+});
+
+export const POST = handleApi(async (req: Request) => {
+  const session = await getSession();
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
+    });
+    if (u) userId = u.id;
+  }
+
+  if (!userId) throw new UnauthorizedError("No user");
+
+  const b = CreateBody.parse(await req.json());
+  const [row] = await db.insert(assetsMaster).values({
+    userId,
+    symbol: b.symbol.toUpperCase(),
+    name: b.name,
+    type: b.type,
+    currencyCode: b.currency.toUpperCase(),
+  }).returning({ id: assetsMaster.symbol });
+
+  return { id: row?.id };
 });

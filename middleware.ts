@@ -7,12 +7,15 @@ export default withAuth({
 export const config = {
   matcher: [
     "/",                         // dashboard
-    "/transactions/:path*",
+    "/accounts/:path*",
     "/budgets/:path*",
+    "/categories/:path*",
     "/goals/:path*",
     "/portfolio/:path*",
+    "/reconcile/:path*",
     "/reports/:path*",
     "/settings/:path*",
+    "/transactions/:path*",
     "/api/((?!auth).*)",           // proteksi semua API kecuali /api/auth/*
   ],
 };

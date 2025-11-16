@@ -35,7 +35,27 @@ export default function SettingsPage(){
 
   const save = useApiMutation<{ok:true}, SettingsReq>(
     (payload)=> api.put("/api/settings", payload),
-    { toastSuccess:"Pengaturan disimpan", onSuccess: ()=> refetch() }
+    {
+      toastSuccess:"Pengaturan disimpan",
+      onSuccess: (_res, vars: SettingsReq) => {
+        refetch();
+        // sinkron ke localStorage & SW
+        try {
+          const mode = vars.offlineMode;
+          if (mode) {
+            window.localStorage.setItem("wefinansio_offline_mode", mode);
+            if (navigator.serviceWorker?.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: "OFFLINE_MODE",
+                value: mode,
+              });
+            }
+          }
+        } catch (e) {
+          // abaikan error kecil
+        }
+      }
+    }
   );
 
   const { data: cats } = useApiQuery<{items:{id:string; name:string; kind:"income"|"expense"}[]}>(
@@ -54,6 +74,21 @@ export default function SettingsPage(){
     setIncomeCat(data.settings.defaultIncomeCategoryId ?? "");
     setExpenseCat(data.settings.defaultExpenseCategoryId ?? "");
   }, [data]);
+
+  // dalam komponen SettingsPage
+  useEffect(()=> {
+    if (data?.settings?.offlineMode) {
+      try {
+        window.localStorage.setItem("wefinansio_offline_mode", data.settings.offlineMode);
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: "OFFLINE_MODE",
+            value: data.settings.offlineMode,
+          });
+        }
+      } catch {}
+    }
+  }, [data?.settings?.offlineMode]);
 
   if (!data) {
     return <div className="text-sm text-muted-foreground">Memuat pengaturan…</div>;
