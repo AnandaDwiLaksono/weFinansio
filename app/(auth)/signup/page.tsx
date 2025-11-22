@@ -7,12 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Link from "next/link";
 
 const FormSchema = z.object({
   name: z.string().min(2, "Minimal 2 karakter").max(80),
@@ -21,13 +22,15 @@ const FormSchema = z.object({
   confirm: z.string(),
 }).refine((d) => d.password === d.confirm, {
   path: ["confirm"],
-  message: "Konfirmasi tidak sama",
+  message: "Konfirmasi kata sandi tidak sama",
 });
 
 type FormValues = z.infer<typeof FormSchema>;
 
 export default function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -36,19 +39,24 @@ export default function SignUpPage() {
 
   const onSubmit = async (v: FormValues) => {
     setSubmitting(true);
+
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: v.name, email: v.email, password: v.password }),
       });
+
       const data = await res.json();
+
       if (!res.ok) {
         toast.error(data?.message || "Gagal mendaftar");
+
         return;
       }
-      // opsi: langsung arahkan ke signin
+      
       toast.success("Akun berhasil dibuat");
+
       window.location.href = "/api/auth/signin";
     } finally {
       setSubmitting(false);
@@ -84,22 +92,40 @@ export default function SignUpPage() {
 
               <div>
                 <Label className="mb-2">Kata sandi</Label>
-                <Input type="password" placeholder="Minimal 8 karakter" {...register("password")} />
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} placeholder="Minimal 8 karakter" {...register("password")} className="pr-10" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
               </div>
 
               <div>
                 <Label className="mb-2">Konfirmasi kata sandi</Label>
-                <Input type="password" placeholder="Ulangi kata sandi" {...register("confirm")} />
+                <div className="relative">
+                  <Input type={showConfirm ? "text" : "password"} placeholder="Ulangi kata sandi" {...register("confirm")} className="pr-10" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {errors.confirm && <p className="text-xs text-red-500 mt-1">{errors.confirm.message}</p>}
               </div>
 
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full cursor-pointer" disabled={submitting}>
                 {submitting ? "Mendaftar..." : "Daftar"}
               </Button>
             </form>
   
-            {/* create divider with text 'OR' */}
+            {/* Divider with text 'OR' */}
             <div className="my-4 flex items-center">
               <div className="flex-1 border-t border-gray-300"></div>
               <span className="px-3 text-sm text-muted-foreground">OR</span>
@@ -107,7 +133,7 @@ export default function SignUpPage() {
             </div>
   
             <div className="mt-3">
-              <Button variant="outline" className="w-full gap-2"
+              <Button variant="outline" className="w-full gap-2 cursor-pointer"
                 onClick={() => signIn("google", { callbackUrl: "/", prompt: "select_account" })}>
                 <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} className="h-5 w-5" />
                 Daftar dengan Google
