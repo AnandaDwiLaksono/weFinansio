@@ -32,6 +32,8 @@ export default function RootLayout({
         <meta name="description" content="weFinansio — catat transaksi, kelola anggaran, dan capai tujuan finansial." />
         
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/icons/manifest-icon-192.maskable.png" sizes="192x192" type="image/png" />
+        <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" sizes="180x180" type="image/png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>
