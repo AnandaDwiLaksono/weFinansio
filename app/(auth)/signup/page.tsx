@@ -56,40 +56,40 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left: Form */}
-      <div className="w-full flex items-center justify-center p-4 md:p-8">
-        <Card className="w-full max-w-md">
+      <div className="w-full flex items-center justify-center p-4 lg:p-8">
+        <Card className="w-full max-w-md shadow-xl">
           <CardContent className="pt-6">
-            <div className="mb-4 text-center">
+            <div className="mb-6 text-center">
               <Image src="/icons/wefinansio_logo_bluegrad_full.png" alt="weFinansio" width={80} height={80} className="mx-auto" />
-              <h1 className="mt-3 text-2xl font-semibold">Daftar</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="mt-3 text-sm text-muted-foreground">
                 Mulai perjalanan finansialmu 🚀
               </p>
+              <h1 className="mt-3 text-2xl font-semibold">Daftar</h1>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <Label>Nama</Label>
+                <Label className="mb-2">Nama</Label>
                 <Input placeholder="Nama lengkap" {...register("name")} />
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
               </div>
 
               <div>
-                <Label>Email</Label>
+                <Label className="mb-2">Email</Label>
                 <Input type="email" placeholder="nama@email.com" {...register("email")} />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
               </div>
 
               <div>
-                <Label>Kata sandi</Label>
+                <Label className="mb-2">Kata sandi</Label>
                 <Input type="password" placeholder="Minimal 8 karakter" {...register("password")} />
                 {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
               </div>
 
               <div>
-                <Label>Konfirmasi kata sandi</Label>
+                <Label className="mb-2">Konfirmasi kata sandi</Label>
                 <Input type="password" placeholder="Ulangi kata sandi" {...register("confirm")} />
                 {errors.confirm && <p className="text-xs text-red-500 mt-1">{errors.confirm.message}</p>}
               </div>
@@ -98,7 +98,14 @@ export default function SignUpPage() {
                 {submitting ? "Mendaftar..." : "Daftar"}
               </Button>
             </form>
-
+  
+            {/* create divider with text 'OR' */}
+            <div className="my-4 flex items-center">
+              <div className="flex-1 border-t border-gray-300"></div>
+              <span className="px-3 text-sm text-muted-foreground">OR</span>
+              <div className="flex-1 border-t border-gray-300"></div>
+            </div>
+  
             <div className="mt-3">
               <Button variant="outline" className="w-full gap-2"
                 onClick={() => signIn("google", { callbackUrl: "/", prompt: "select_account" })}>
@@ -109,26 +116,40 @@ export default function SignUpPage() {
 
             <p className="mt-4 text-center text-sm">
               Sudah punya akun?{" "}
-              <Link href="/api/auth/signin" className="text-primary hover:underline">Masuk</Link>
+              <Link href="/api/auth/signin" className="text-blue-600 hover:underline">Masuk</Link>
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Right: Tagline (desktop only) */}
-      <div className="hidden md:flex bg-gradient-to-b from-blue-600 to-blue-500 text-white p-10">
+      <div className="hidden lg:flex bg-gradient-to-b from-blue-600 to-blue-500 text-white py-10 px-20 justify-center items-center">
         <div className="m-auto max-w-md">
-          <h2 className="text-3xl font-bold leading-snug">
-            Sadar, rencanakan, konsisten — bareng weFinansio.
+          <div className="text-sm font-medium mb-2 opacity-90">Kelola uang dengan lebih sadar</div>
+          <h2 className="text-3xl font-semibold leading-tight mb-3">
+            Sadar, rencanakan, konsisten dengan keuanganmu — bersama weFinansio.
           </h2>
-          <p className="mt-4 opacity-90">
-            Catat rapi, keputusan lebih pasti.
-          </p>
-          <ul className="mt-6 space-y-2 opacity-95 text-sm">
-            <li>• Kategorikan otomatis (aturan by keyword).</li>
-            <li>• Pantau budget & sisa per kategori.</li>
-            <li>• Goal tabungan dengan progress & ETA.</li>
+          <div className="text-sm leading-relaxed mb-5 opacity-95">
+            Catat pengeluaran &amp; pemasukan, susun budget bulanan, capai goal tabungan, dan pantau portofolio investasimu di satu tempat.
+          </div>
+          <ul className="space-y-2.5 text-sm">
+            <li>• Kategorikan transaksi otomatis berdasarkan keyword & akun.</li>
+            <li>• Pantau budget, sisa limit per kategori, dan tren bulanan.</li>
+            <li>• Set goal tabungan dengan target waktu, progress, dan pengingat.</li>
+            <li>• Ringkas portofolio investasi: cash, reksa dana, saham, dan lainnya.</li>
           </ul>
+          <div className="mt-6 px-4 py-3.5 rounded-xl bg-[rgba(255,255,255,0.08)] flex items-center justify-center gap-3 text-xs">
+            <div className="flex flex-col gap-1">
+              <p className="font-medium">Snapshot keuangan hari ini</p>
+              <p className="opacity-85">Lihat saldo, budget terpakai, dan progress goal secara sekilas.</p>
+            </div>
+            <div className="w-[72px] h-12 rounded-md bg-[rgba(255,255,255,0.12)] flex items-end justify-center gap-1 p-1.5">
+              <div className="h-4 w-1.5 rounded-b-full bg-green-500"></div>
+              <div className="h-6.5 w-1.5 rounded-b-full bg-green-500"></div>
+              <div className="h-5 w-1.5 rounded-b-full bg-green-500"></div>
+              <div className="h-8.5 w-1.5 rounded-b-full bg-green-500"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
