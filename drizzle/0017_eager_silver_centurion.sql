@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "balance" numeric(18, 2) DEFAULT '0' NOT NULL;

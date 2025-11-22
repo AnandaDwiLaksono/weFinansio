@@ -78,32 +78,32 @@ export const users = pgTable("users", {
     .notNull(),
 });
 
-export const accounts = pgTable(
-  "accounts",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    name: varchar("name", { length: 120 }).notNull(),
-    type: accountType("type").notNull(),
-
-    institution: varchar("institution", { length: 120 }),
-    currencyCode: varchar("currency_code", { length: 3 }).notNull().default("IDR"),
-
-    archived: boolean("archived").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    uniqueIndex("accounts_user_name_uq").on(t.userId, t.name),
-    index("accounts_user_idx").on(t.userId),
-  ],
-);
+export const accounts = pgTable("accounts", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  type: accountType("type").notNull(),
+  currencyCode: varchar("currency_code", { length: 3 })
+    .notNull()
+    .default("IDR"),
+  balance: numeric("balance", { precision: 18, scale: 2 })
+    .notNull()
+    .default("0"),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+}, (t) => [
+  uniqueIndex("accounts_user_name_uq").on(t.userId, t.name),
+  index("accounts_user_idx").on(t.userId),
+]);
 
 export const categories = pgTable(
   "categories",
@@ -237,6 +237,25 @@ export const userSettings = pgTable("user_settings", {
   uniqueIndex("user_settings_user_id_uq").on(t.userId),
 ]);
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 255 })
+    .notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true })
+    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+}, (t) => [
+  index("password_reset_tokens_user_id_idx").on(t.userId),
+  uniqueIndex("password_reset_tokens_token_uq").on(t.token),
+]);
 
 /* =========================
    Budgeting
@@ -570,4 +589,8 @@ export const recurringRulesRelations = relations(recurringRules, ({ one }) => ({
   user: one(users, { fields: [recurringRules.userId], references: [users.id] }),
   account: one(accounts, { fields: [recurringRules.accountId], references: [accounts.id] }),
   category: one(categories, { fields: [recurringRules.categoryId], references: [categories.id] }),
+}));
+
+export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
+  user: one(users, { fields: [passwordResetTokens.userId], references: [users.id] }),
 }));
