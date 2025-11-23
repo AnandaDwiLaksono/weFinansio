@@ -54,6 +54,7 @@ export default function DashboardPage() {
     router.replace("/signin");
     return null;
   }
+  
   if (status === "loading" || isLoading) return <LoadingState />;
   if (error || !data) return <div className="text-red-500">Gagal memuat data</div>;
 

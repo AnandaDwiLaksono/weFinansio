@@ -1,4 +1,3 @@
-import { Fallback } from "@radix-ui/react-avatar";
 import withPWA from "next-pwa";
 
 const withPWAFn = withPWA({
@@ -77,6 +76,15 @@ const withPWAFn = withPWA({
 const nextConfig = {
   reactStrictMode: true,
   experimental: { serverActions: { bodySizeLimit: "2mb" } },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default withPWAFn(nextConfig);
