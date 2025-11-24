@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { Menu, ChevronDown, ChevronLeft, ChevronRight, Settings, Power } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import Sidebar from "./Sidebar";
 
 const items = [
@@ -66,12 +66,11 @@ export default function HeaderBar({ collapsed, onToggle }: { collapsed: boolean;
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
+          <SheetTitle className="text-2xl font-semibold">{items.find(item => item.href === pathname)?.label}</SheetTitle>
           <SheetContent side="left" className="p-0 w-72">
             <Sidebar collapsed={false} />
           </SheetContent>
         </Sheet>
-
-        <h1 className="text-2xl font-semibold">{items.find(item => item.href === pathname)?.label}</h1>
 
         <div className="ml-auto" />
         {/* User menu */}

@@ -94,6 +94,7 @@ export const accounts = pgTable("accounts", {
     .notNull()
     .default("0"),
   archived: boolean("archived").notNull().default(false),
+  note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

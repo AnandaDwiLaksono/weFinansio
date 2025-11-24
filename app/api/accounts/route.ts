@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { accounts, users } from "@/lib/db/schema";
@@ -9,16 +9,20 @@ import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";
 
 const ListQuery = z.object({
-  q: z.string().optional(),
+  search: z.string().optional(),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
+  type: z.enum(["all", "cash", "bank", "ewallet", "investment"]).default("all"),
+  currency: z.enum(["all", "IDR", "USD", "EUR"]).default("all"),
+  archived: z.enum(["all", "true", "false"]).default("all"),
 });
 const CreateBody = z.object({
   name: z.string().min(1).max(80),
   type: z.enum(["cash","bank","ewallet","investment"]).default("cash"),
   currency: z.string().length(3).default("IDR"),
   balance: z.number().nonnegative().default(0),
-  note: z.string().max(200).optional().nullable(),
+  archived: z.boolean().default(false),
+  note: z.string().max(255).optional(),
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -30,6 +34,7 @@ export const GET = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -37,9 +42,13 @@ export const GET = handleApi(async (req: Request) => {
 
   const url = new URL(req.url);
   const p = ListQuery.parse(Object.fromEntries(url.searchParams));
+
   const where = [
     eq(accounts.userId, userId),
-    p.q ? ilike(accounts.name, `%${p.q}%`) : undefined,
+    p.search ? ilike(accounts.name, `%${p.search}%`) : undefined,
+    p.type !== "all" ? eq(accounts.type, p.type) : undefined,
+    p.currency !== "all" ? eq(accounts.currencyCode, p.currency) : undefined,
+    p.archived !== "all" ? eq(accounts.archived, p.archived === "true") : undefined,
   ].filter(Boolean) as Parameters<typeof and>;
 
   const offset = (p.page - 1) * p.limit;
@@ -50,13 +59,14 @@ export const GET = handleApi(async (req: Request) => {
       name: accounts.name,
       type: accounts.type,
       currency: accounts.currencyCode,
-      // balance: sql<string>`${accounts.balanceAmount}::text`,
-      // note: accounts.note,
-      createdAt: accounts.createdAt,
+      balance: accounts.balance,
+      archived: accounts.archived,
+      note: accounts.note,
+      updatedAt: accounts.updatedAt,
     })
     .from(accounts)
     .where(and(...where))
-    .orderBy(accounts.createdAt)
+    .orderBy(asc(accounts.name))
     .limit(p.limit)
     .offset(offset);
 
@@ -77,6 +87,7 @@ export const POST = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -95,8 +106,9 @@ export const POST = handleApi(async (req: Request) => {
     name: body.name,
     type: body.type,
     currencyCode: body.currency,
-    // balance: String(body.balance),
-    // note: body.note ?? null,
+    balance: body.balance.toString(),
+    archived: body.archived,
+    note: body.note,
   }).returning({ id: accounts.id });
 
   return { id: row?.id };

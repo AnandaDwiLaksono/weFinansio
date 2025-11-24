@@ -11,8 +11,7 @@ import { BadRequestError, NotFoundError, UnauthorizedError } from "@/lib/errors"
 const UpdateBody = z.object({
   name: z.string().min(1).max(80).optional(),
   type: z.enum(["cash","bank","ewallet","investment"]).optional(),
-  currency: z.string().length(3).optional(),
-  balance: z.number().nonnegative().optional(),
+  archived: z.boolean().optional(),
   note: z.string().max(200).nullable().optional(),
 });
 
@@ -42,9 +41,8 @@ export const PATCH = handleApi(async (req: Request) => {
   await db.update(accounts).set({
     name: body.name,
     type: body.type,
-    currencyCode: body.currency,
-    // balance: typeof body.balance === "number" ? String(body.balance) : undefined,
-    // note: typeof body.note === "undefined" ? undefined : (body.note ?? null),
+    archived: body.archived,
+    note: typeof body.note === "undefined" ? undefined : (body.note ?? null),
   }).where(eq(accounts.id, id));
 
   return { ok: true };
