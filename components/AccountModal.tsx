@@ -6,9 +6,22 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useApiMutation, api } from "@/lib/react-query";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
 
 const currencyOptions = [
   { value: "IDR", label: "Rp" },
@@ -78,7 +91,10 @@ export default function AccountModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm(initial); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => { setOpen(v); if (v) setForm(initial); }}
+    >
       <DialogTrigger asChild={asChild}>
         {children}
       </DialogTrigger>
@@ -91,7 +107,9 @@ export default function AccountModal({
             {type === "add" ? "Buat sumber dana baru untuk dompet, rekening, atau e-wallet." : "Perbarui nama, jenis akun, atau catatan tanpa mengubah riwayat transaksi."}
           </DialogDescription>
         </DialogHeader>
-        <h3 className="text-xs font-medium text-muted-foreground tracking-wider">DETAIL AKUN</h3>
+        <h3 className="text-xs font-medium text-muted-foreground tracking-wider">
+          DETAIL AKUN
+        </h3>
         <form
           onSubmit={(e) => {
             e.preventDefault();

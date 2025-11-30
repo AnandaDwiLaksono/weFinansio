@@ -134,6 +134,13 @@
       "when": 1763919742848,
       "tag": "0018_bent_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1764427456034,
+      "tag": "0019_legal_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

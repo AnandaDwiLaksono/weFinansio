@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db";
 import { categories, transactions, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
@@ -9,17 +10,19 @@ import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";
 
 const ListQuery = z.object({
-  q: z.string().optional(),
-  kind: z.enum(["income","expense"]).optional(),
+  search: z.string().optional(),
+  kind: z.enum(["all", "income", "expense"]).default("all"),
+  archived: z.enum(["all", "true", "false"]).default("all"),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
 });
-
 const CreateBody = z.object({
   name: z.string().min(1).max(60),
   kind: z.enum(["income","expense"]),
   color: z.string().regex(/^#?[0-9a-fA-F]{6}$/).default("#3b82f6"),
-  icon: z.string().max(40).default("LuWallet"),
+  icon: z.string().max(40).default("Wallet"),
+  archived: z.boolean().default(false),
+  note: z.string().max(255).optional(),
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -31,6 +34,7 @@ export const GET = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -38,10 +42,12 @@ export const GET = handleApi(async (req: Request) => {
 
   const url = new URL(req.url);
   const p = ListQuery.parse(Object.fromEntries(url.searchParams));
+
   const whereConditions = [
     eq(categories.userId, userId),
-    p.kind ? eq(categories.kind, p.kind) : undefined,
-    p.q ? ilike(categories.name, `%${p.q}%`) : undefined,
+    p.search ? ilike(categories.name, `%${p.search}%`) : undefined,
+    p.kind !== "all" ? eq(categories.kind, p.kind) : undefined,
+    p.archived !== "all" ? eq(categories.archived, p.archived === "true") : undefined,
   ].filter(Boolean);
   const where = whereConditions as NonNullable<typeof whereConditions[number]>[];
 
@@ -54,7 +60,8 @@ export const GET = handleApi(async (req: Request) => {
       kind: categories.kind,
       color: categories.color,
       icon: categories.icon,
-      usage: sql<number>`COALESCE( (SELECT COUNT(*) FROM ${transactions} t WHERE t.category_id = ${categories.id}), 0 )::int`,
+      archived: categories.archived,
+      note: categories.note,
       createdAt: categories.createdAt,
     })
     .from(categories)
@@ -99,6 +106,8 @@ export const POST = handleApi(async (req: Request) => {
     kind: body.kind,
     color: hex,
     icon: body.icon,
+    archived: body.archived,
+    note: body.note,
   }).returning({ id: categories.id });
 
   return { id: row?.id };

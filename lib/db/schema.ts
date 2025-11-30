@@ -106,35 +106,33 @@ export const accounts = pgTable("accounts", {
   index("accounts_user_idx").on(t.userId),
 ]);
 
-export const categories = pgTable(
-  "categories",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-
-    name: varchar("name", { length: 120 }).notNull(),
-    kind: categoryKind("kind").notNull(), // expense / income
-    color: varchar("color", { length: 16 }),
-    icon: varchar("icon", { length: 64 }),
-
-    archived: boolean("archived").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    uniqueIndex("categories_user_name_kind_uq").on(
-      t.userId,
-      t.name,
-      t.kind,
-    ),
-    index("categories_user_idx").on(t.userId),
-  ],
-);
+export const categories = pgTable("categories", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  kind: categoryKind("kind").notNull(), // expense / income
+  color: varchar("color", { length: 16 }),
+  icon: varchar("icon", { length: 64 }),
+  archived: boolean("archived").notNull().default(false),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+}, (t) => [
+  uniqueIndex("categories_user_name_kind_uq").on(
+    t.userId,
+    t.name,
+    t.kind,
+  ),
+  index("categories_user_idx").on(t.userId),
+]);
 
 export const transactions = pgTable("transactions", {
   id: uuid("id")

@@ -13,6 +13,8 @@ const UpdateBody = z.object({
   kind: z.enum(["income","expense"]).optional(),
   color: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
   icon: z.string().max(40).optional(),
+  archived: z.boolean().optional(),
+  note: z.string().max(255).optional(),
 });
 
 export const PATCH = handleApi(async (req: Request) => {
@@ -45,6 +47,8 @@ export const PATCH = handleApi(async (req: Request) => {
     kind: body.kind,
     color: hex,
     icon: body.icon,
+    archived: body.archived,
+    note: body.note,
   }).where(eq(categories.id, id));
 
   return { ok: true };
@@ -80,5 +84,6 @@ export const DELETE = handleApi(async (_req: Request) => {
   if (used) throw new BadRequestError("Kategori sedang dipakai transaksi. Pindahkan/hapus transaksi terlebih dahulu.");
 
   await db.delete(categories).where(eq(categories.id, id));
+  
   return { ok: true };
 });

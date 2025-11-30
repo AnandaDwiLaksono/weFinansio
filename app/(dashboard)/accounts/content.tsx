@@ -7,13 +7,31 @@ import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { useApiMutation, useApiQuery, api } from "@/lib/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import AccountModal from "@/components/AccountModal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 type Row = {
   id: string;
@@ -80,22 +98,24 @@ export default function AccountsContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-xl font-medium mb-4 text-foreground">Kelola sumber dana dan rekeningmu</h1>
-          </div>
+          <h1 className="text-xl font-medium mb-4 text-foreground">
+            Kelola sumber dana dan rekeningmu
+          </h1>
           <Card className="px-4 py-2.5 bg-secondary rounded-xl flex flex-col gap-1 shadow-lg">
-            <div className="text-xs font-medium text-muted-foreground tracking-wider">TOTAL SALDO</div>
-            <div className="text-lg font-semibold text-foreground">{rupiah(totalSaldo)}</div>
+            <div className="text-xs font-medium text-muted-foreground tracking-wider">
+              TOTAL SALDO
+            </div>
+            <div className="text-lg font-semibold text-foreground">
+              {rupiah(totalSaldo)}
+            </div>
           </Card>
         </div>
-        <div>
-          <div className="hidden md:block">
-            <AccountModal asChild type="add">
-              <Button size="sm" className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" /> Tambah Akun
-              </Button>
-            </AccountModal>
-          </div>
+        <div className="hidden md:block">
+          <AccountModal asChild type="add">
+            <Button size="sm" className="cursor-pointer">
+              <Plus className="h-4 w-4 mr-2" /> Tambah Akun
+            </Button>
+          </AccountModal>
         </div>
       </div>
 
@@ -327,10 +347,13 @@ export default function AccountsContent() {
           </CardHeader>
           <CardContent className="space-y-2.5">
             {(() => {
-              const byType = items.reduce((acc, a) => {
-                acc[a.type] = (acc[a.type] || 0) + Number(a.balance || 0);
-                return acc;
-              }, {} as Record<string, number>);
+              const byType = items
+                .filter(a => !a.archived)
+                .reduce((acc, a) => {
+                  acc[a.type] = (acc[a.type] || 0) + Number(a.balance || 0);
+
+                  return acc;
+                }, {} as Record<string, number>);
               
               const types = [
                 { key: 'cash', label: 'Tunai', count: items.filter(a => a.type === 'cash').length },
@@ -385,10 +408,14 @@ export default function AccountsContent() {
 
       {/* Kartu mobile */}
       <div className="md:hidden space-y-2 bg-card rounded-lg shadow-lg p-2.5">
-        <div className="flex justify-between items-center gap-2 mb-0.5">
+        <div className="flex justify-between items-center gap-2">
           <div>
-            <h2 className="text-base font-semibold text-card-foreground">Daftar Akun</h2>
-            <p className="text-xs text-muted-foreground">Kelola semua dompet, rekening bank, e-wallet, dan investasi.</p>
+            <h2 className="text-base font-semibold text-card-foreground">
+              Daftar Akun
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Kelola semua dompet, rekening bank, e-wallet, dan investasi.
+            </p>
           </div>
           <div className="px-1.5 py-0.5 rounded-full bg-accent text-xs text-muted-foreground w-1/4">
             {activedAccounts} akun aktif
@@ -422,8 +449,8 @@ export default function AccountsContent() {
                       {rupiah(a.balance)}
                     </div>
                     <span className="inline-flex items-center gap-1.5 text-xs mt-1 bg-[#10b9811f] px-2 py-0.5 rounded-full text-[#047857] font-medium">
-                      <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                      Aktif
+                      <span className={`h-2 w-2 rounded-full ${a.archived ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                      {a.archived ? 'Diarsipkan' : 'Aktif'}
                     </span>
                   </div>
                 </div>
@@ -492,14 +519,18 @@ export default function AccountsContent() {
       {/* Ringkasan Mobile */}
       <Card className="md:hidden shadow-lg">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-medium">Ringkasan Akun</CardTitle>
+          <CardTitle className="text-base font-medium">
+            Ringkasan Akun
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {(() => {
-            const byType = items.reduce((acc, a) => {
-              acc[a.type] = (acc[a.type] || 0) + Number(a.balance || 0);
-              return acc;
-            }, {} as Record<string, number>);
+            const byType = items
+              .filter(a => !a.archived)
+              .reduce((acc, a) => {
+                acc[a.type] = (acc[a.type] || 0) + Number(a.balance || 0);
+                return acc;
+              }, {} as Record<string, number>);
             
             const types = [
               { key: 'cash', label: 'Tunai', count: items.filter(a => a.type === 'cash').length },
