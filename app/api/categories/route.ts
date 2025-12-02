@@ -4,7 +4,7 @@ import { and, eq, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { categories, transactions, users } from "@/lib/db/schema";
+import { categories, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import CategoryModal from "@/components/CategoryModal";
+import ConfirmationModal from "@/components/ConfirmationModal";
 
 // Icon mapper
 const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
@@ -302,15 +303,23 @@ export default function CategoriesContent() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </CategoryModal>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-7 w-7 text-white rounded-full"
-                          aria-label="Hapus"
-                          onClick={() => delMut.mutate({ id: c.id })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <ConfirmationModal
+                          title="Hapus Kategori"
+                          description={`Apakah Anda yakin ingin menghapus kategori "${c.name}"? Tindakan ini tidak dapat dibatalkan.`}
+                          confirmText="Hapus"
+                          cancelText="Batal"
+                          onConfirm={() => delMut.mutate({ id: c.id })}
+                          trigger={
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-7 w-7 text-white rounded-full"
+                              aria-label="Hapus"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -493,14 +502,23 @@ export default function CategoriesContent() {
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </CategoryModal>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-full text-white"
-                      onClick={() => delMut.mutate({ id: c.id })}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <ConfirmationModal
+                      title="Hapus Kategori"
+                      description={`Apakah Anda yakin ingin menghapus kategori "${c.name}"? Tindakan ini tidak dapat dibatalkan.`}
+                      confirmText="Hapus"
+                      cancelText="Batal"
+                      onConfirm={() => delMut.mutate({ id: c.id })}
+                      trigger={
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-7 w-7 text-white rounded-full"
+                          aria-label="Hapus"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
                   </div>
                 </div>
               </CardContent>
