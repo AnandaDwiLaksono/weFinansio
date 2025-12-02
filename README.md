@@ -37,28 +37,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 <=============================================================================================================================>
 
-Catatan penting
-
-Proteksi akses sudah diatur lewat middleware.ts yang sebelumnya kita buat; jadi user yang belum login akan diarahkan ke /signin.
-
-Jika nanti kamu punya opening balance per akun, kita update query saldo agar: saldo = opening_balance + income - expense - (transfer keluar) + (transfer masuk). Untuk itu, kita bisa tambah tabel account_transfers atau log ganda per transfer.
-
-Ingin KPI “minggu ini” / “hari ini”? Tinggal tambah range helper mirip monthRange.
-
-<=============================================================================================================================>
-
-Integrasi cepat di Dashboard
-
-Import AddAccountModal di header dashboard (sebelah tombol Tambah Transaksi).
-
-Tambahkan query akun untuk mengisi list saldo (sudah ada di /api/summary), atau langsung pakai /api/accounts.
-
-Jika kamu ingin:
-
-validasi warna/icon di UI,
-
-filter & search kategori,
-
-atau drag to reorder kategori,
-
-tinggal bilang — aku lanjutkan modulnya.
+Next tambahkan pengaman saat hapus data. Yaitu munculkan dialog telebih dahulu sebagai konfirmasi jika ingin menghapus data.
+Gunakan component dialog dari shadcn

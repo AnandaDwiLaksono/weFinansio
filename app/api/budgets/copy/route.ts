@@ -38,15 +38,22 @@ export const POST = handleApi(async (req: Request) => {
       const existsId = existMap.get(s.categoryId);
       if (existsId && !overwrite) continue;
       if (existsId && overwrite) {
-        await tx.update(budgets).set({ amount: s.amount, carryover: s.carryover }).where(eq(budgets.id, existsId));
+        // Reset accumulated carryover to 0 when overwriting
+        await tx.update(budgets).set({ 
+          amount: s.amount, 
+          carryover: s.carryover,
+          accumulatedCarryover: "0"
+        }).where(eq(budgets.id, existsId));
         copied++;
       } else {
+        // Reset accumulated carryover to 0 for new copies
         await tx.insert(budgets).values({
           userId,
           categoryId: s.categoryId,
           periodMonth: to,
           amount: s.amount,
           carryover: s.carryover,
+          accumulatedCarryover: "0",
         });
         copied++;
       }

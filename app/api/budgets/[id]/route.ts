@@ -11,6 +11,7 @@ import { NotFoundError, UnauthorizedError } from "@/lib/errors";
 const UpdateBody = z.object({
   limitAmount: z.number().nonnegative().optional(),
   carryover: z.boolean().optional(),
+  accumulatedCarryover: z.number().nonnegative().optional(),
 });
 
 export const PATCH = handleApi(async (req: Request) => {
@@ -39,6 +40,7 @@ export const PATCH = handleApi(async (req: Request) => {
   await db.update(budgets).set({
     amount: typeof body.limitAmount === "number" ? String(body.limitAmount) : undefined,
     carryover: typeof body.carryover === "boolean" ? body.carryover : undefined,
+    accumulatedCarryover: typeof body.accumulatedCarryover === "number" ? String(body.accumulatedCarryover) : undefined,
   }).where(eq(budgets.id, id));
 
   return { ok: true };

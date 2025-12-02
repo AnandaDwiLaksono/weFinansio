@@ -1,0 +1,1 @@
+ALTER TABLE "budgets" ADD COLUMN "accumulated_carryover" numeric(18, 2) DEFAULT '0' NOT NULL;

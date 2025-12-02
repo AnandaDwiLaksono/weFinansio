@@ -65,6 +65,7 @@ export const GET = handleApi(async (req: Request) => {
       period: budgets.periodMonth,
       limitAmount: sql<string>`${budgets.amount}::text`,
       carryover: budgets.carryover,
+      accumulatedCarryover: sql<string>`${budgets.accumulatedCarryover}::text`,
       categoryId: categories.id,
       categoryName: categories.name,
       categoryKind: categories.kind,
@@ -113,29 +114,35 @@ export const GET = handleApi(async (req: Request) => {
   // preload all previous budgets to avoid query per item
   const prevBudgets = await db.query.budgets.findMany({
     where: and(eq(budgets.userId, userId), eq(budgets.periodMonth, prev)),
-    columns: { categoryId: true, amount: true }
+    columns: { categoryId: true, amount: true, accumulatedCarryover: true }
   });
   
-  const prevBudgetMap = new Map<string, number>();
+  const prevBudgetMap = new Map<string, { amount: number; accumulated: number }>();
   for (const pb of prevBudgets) {
-    prevBudgetMap.set(pb.categoryId, Number(pb.amount || 0));
+    prevBudgetMap.set(pb.categoryId, {
+      amount: Number(pb.amount || 0),
+      accumulated: Number(pb.accumulatedCarryover || 0)
+    });
   }
 
   const items = rows.map(r => {
     const limit = Number(r.limitAmount||0);
+    const accumulated = Number(r.accumulatedCarryover || 0);
     const spent = spentMap.get(r.categoryId ?? "null") || 0;
 
-    let carryAdd = 0;
-    if (r.carryover) {
-      const prevLimit = prevBudgetMap.get(r.categoryId ?? "null") || 0;
-      const prevSpent = prevSpentMap.get(r.categoryId ?? "null") || 0;
-      carryAdd = Math.max(0, prevLimit - prevSpent);
-    }
-
-    const effectiveLimit = limit + carryAdd;
+    const effectiveLimit = limit + accumulated;
     const remaining = Math.max(0, effectiveLimit - spent);
     const progress = effectiveLimit>0 ? Math.min(1, spent/effectiveLimit) : 0;
-    return { ...r, limit, spent, remaining, progress, effectiveLimit, carryAdd, prevPeriod: prev };
+    return { 
+      ...r, 
+      limit, 
+      spent, 
+      remaining, 
+      progress, 
+      effectiveLimit, 
+      accumulatedCarryover: accumulated,
+      prevPeriod: prev 
+    };
   });
 
   // ringkasan total
@@ -175,12 +182,56 @@ export const POST = handleApi(async (req: Request) => {
   });
   if (dup) throw new BadRequestError("Budget untuk kategori & periode ini sudah ada.");
 
+  // Calculate accumulated carryover if enabled
+  let accumulatedCarryover = 0;
+  
+  if (body.carryover) {
+    const prev = prevPeriod(body.period);
+    const { start: prevStart, end: prevEnd } = periodRange(prev);
+    
+    // Get previous budget
+    const prevBudget = await db.query.budgets.findFirst({
+      where: and(
+        eq(budgets.userId, userId),
+        eq(budgets.categoryId, body.categoryId),
+        eq(budgets.periodMonth, prev)
+      ),
+      columns: { amount: true, accumulatedCarryover: true }
+    });
+    
+    if (prevBudget) {
+      // Calculate previous month spent
+      const prevSpentResult = await db
+        .select({
+          spent: sql<string>`SUM(${transactions.amount})::text`
+        })
+        .from(transactions)
+        .where(and(
+          eq(transactions.userId, userId),
+          eq(transactions.categoryId, body.categoryId),
+          eq(transactions.type, "expense"),
+          between(transactions.occurredAt, prevStart, prevEnd)
+        ));
+      
+      const prevSpent = Number(prevSpentResult[0]?.spent || 0);
+      const prevLimit = Number(prevBudget.amount || 0);
+      const prevAccumulated = Number(prevBudget.accumulatedCarryover || 0);
+      
+      // Total effective limit previous month
+      const prevEffectiveLimit = prevLimit + prevAccumulated;
+      
+      // Remaining from previous month becomes new accumulated carryover
+      accumulatedCarryover = Math.max(0, prevEffectiveLimit - prevSpent);
+    }
+  }
+
   const [row] = await db.insert(budgets).values({
     userId,
     categoryId: body.categoryId,
     periodMonth: body.period,
     amount: String(body.limitAmount),
     carryover: body.carryover ?? false,
+    accumulatedCarryover: String(accumulatedCarryover),
   }).returning({ id: budgets.id });
 
   return { id: row?.id };
