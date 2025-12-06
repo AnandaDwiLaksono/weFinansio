@@ -246,7 +246,7 @@ export default function AccountModal({
             >
               Batal
             </Button>
-            <Button type="submit" disabled={create.isPending}>
+            <Button type="submit" disabled={create.isPending || patch.isPending}>
               Simpan
             </Button>
           </div>

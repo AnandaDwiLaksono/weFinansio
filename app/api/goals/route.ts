@@ -18,6 +18,7 @@ const CreateBody = z.object({
   targetAmount: z.number().positive(),
   targetDate: z.string().date().optional().nullable(),
   startAmount: z.number().nonnegative().default(0),
+  linkedAccountId: z.string().uuid().optional().nullable(),
   color: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
   icon: z.string().max(40).optional(),
 });
@@ -50,6 +51,7 @@ export const GET = handleApi(async (req: Request) => {
       targetAmount: sql<string>`${goals.targetAmount}::text`,
       targetDate: goals.targetDate,
       startAmount: sql<string>`${goals.startAmount}::text`,
+      linkedAccountId: goals.linkedAccountId,
       color: goals.color,
       icon: goals.icon,
       createdAt: goals.createdAt,
@@ -96,6 +98,7 @@ export const POST = handleApi(async (req: Request) => {
     targetAmount: body.targetAmount.toString(),
     targetDate: body.targetDate ? new Date(body.targetDate).toString() : null,
     startAmount: body.startAmount.toString(),
+    linkedAccountId: body.linkedAccountId ?? null,
     color,
     icon: body.icon ?? null,
   }).returning({ id: goals.id });

@@ -115,7 +115,8 @@ export const POST = handleApi(async (req: Request) => {
     const txNote = [noteBase, `Goal: ${own.name}`].filter(Boolean).join(" | ");
 
     if (b.amount > 0) {
-      // DEPOSIT ke goal => uang keluar dari akun (expense)
+      // DEPOSIT ke goal => catat sebagai expense dengan kategori (jika user ingin track di budget)
+      // Ini tetap expense karena goal bukan "account" real, hanya tracking tujuan
       await tx.insert(transactions).values({
         userId,
         occurredAt,
@@ -126,7 +127,7 @@ export const POST = handleApi(async (req: Request) => {
         note: txNote,
       });
     } else {
-      // WITHDRAW dari goal => uang masuk ke akun (income)
+      // WITHDRAW dari goal => uang kembali ke akun (income)
       const val = Math.abs(b.amount);
       await tx.insert(transactions).values({
         userId,

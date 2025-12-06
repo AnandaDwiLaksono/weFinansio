@@ -36,6 +36,3 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 <=============================================================================================================================>
-
-Next tambahkan pengaman saat hapus data. Yaitu munculkan dialog telebih dahulu sebagai konfirmasi jika ingin menghapus data.
-Gunakan component dialog dari shadcn

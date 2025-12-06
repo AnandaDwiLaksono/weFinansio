@@ -20,6 +20,7 @@ type Goal = {
   progress: number;
   remaining: number;
   targetDate?: string | null;
+  linkedAccountId?: string | null;
   color?: string | null;
   icon?: string | null;
 };
@@ -34,12 +35,19 @@ export default function GoalsPage(){
     { staleTime: 10_000 }
   );
 
+  const { data: accsData } = useApiQuery<{items:{id:string; name:string}[]}>(
+    ["accounts-list"],
+    () => api.get("/api/accounts"),
+    { staleTime: 60_000 }
+  );
+
   const del = useApiMutation<{ok: true}, {id: string}>(
     ({id}) => api.del(`/api/goals/${id}`),
     { onSuccess: ()=> refetch() }
   );
 
   const rawItems = data?.items ?? [];
+  const accountsMap = new Map((accsData?.items ?? []).map(a => [a.id, a.name]));
 
   const items = rawItems.filter(g => {
     const today = new Date();
@@ -95,6 +103,7 @@ export default function GoalsPage(){
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map(g => {
           const tag = getGoalStatus(g);
+          const linkedAccName = g.linkedAccountId ? accountsMap.get(g.linkedAccountId) : null;
           return (
             <Card key={g.id}>
               <CardHeader className="pb-2">
@@ -110,6 +119,11 @@ export default function GoalsPage(){
                     </Badge>
                   </div>
                 </CardTitle>
+                {linkedAccName && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    🔗 Auto dari: <strong>{linkedAccName}</strong>
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">

@@ -13,6 +13,7 @@ const UpdateBody = z.object({
   targetAmount: z.number().positive().optional(),
   targetDate: z.string().date().optional().nullable(),
   startAmount: z.number().nonnegative().optional(),
+  linkedAccountId: z.string().uuid().optional().nullable(),
   color: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional(),
   icon: z.string().max(40).optional(),
 });
@@ -32,6 +33,7 @@ export const PATCH = handleApi(async (req: Request) => {
     targetAmount: typeof b.targetAmount === "number" ? String(b.targetAmount) : undefined,
     targetDate: b.targetDate === undefined ? undefined : (b.targetDate ?? null),
     startAmount: typeof b.startAmount === "number" ? String(b.startAmount) : undefined,
+    linkedAccountId: b.linkedAccountId === undefined ? undefined : (b.linkedAccountId ?? null),
     color: b.color ? (b.color.startsWith("#") ? b.color : `#${b.color}`) : undefined,
     icon: b.icon,
   }).where(eq(goals.id, id));

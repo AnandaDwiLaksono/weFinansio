@@ -1,0 +1,301 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { 
+  Wallet, 
+  Utensils, 
+  ShoppingCart, 
+  Home, 
+  Car, 
+  Coffee, 
+  Heart, 
+  Gift, 
+  DollarSign, 
+  TrendingUp, 
+  Briefcase, 
+  Copy
+} from "lucide-react";
+
+import { useApiMutation, useApiQuery, api } from "@/lib/react-query";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Checkbox } from "./ui/checkbox";
+
+// Icon mapper
+const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+  Wallet,
+  Utensils,
+  ShoppingCart,
+  Home,
+  Car,
+  Coffee,
+  Heart,
+  Gift,
+  DollarSign,
+  TrendingUp,
+  Briefcase,
+};
+
+type Row = {
+  id: string;
+  name: string;
+  kind: "income" | "expense";
+  color: string;
+  icon: string;
+  archived: boolean;
+  note: string;
+  createdAt: string
+};
+type ListRes = {
+  items: Row[];
+  page: number;
+  limit: number;
+  total: number
+};
+
+export default function BudgetModal({
+  asChild = false,
+  children,
+  type,
+  initial = {
+    period: currentPeriod(),
+    categoryId: "",
+    limitAmount: "",
+    carryover: false,
+  },
+  onSaved,
+}: {
+  asChild?: boolean;
+  children?: React.ReactNode;
+  type?: "add" | "edit";
+  initial?: {
+    period: string;
+    categoryId: string;
+    limitAmount: string;
+    carryover: boolean;
+  };
+  onSaved?: () => void;
+}) {
+  const queryClient = useQueryClient();
+
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(initial);
+  
+  const { data: cats } = useApiQuery<ListRes>(
+    ["cats-budget"],
+    () => api.get("/api/categories?limit=100&page=1&kind=expense"),
+    { placeholderData: keepPreviousData}
+  );
+
+  const copy = useApiMutation<{ amount: number }, { categoryId: string; period: string }>(
+    ({ categoryId, period }) => api.get(`/api/budgets/${categoryId}/copy?lastPeriodMonth=${period}-01`),
+    {
+      onSuccess: (data) => {
+        setForm((f) => ({ ...f, limitAmount: data.amount.toString() }));
+        toast.success("Berhasil menyalin nominal dari bulan sebelumnya");
+      }
+    }
+  );
+
+  const create = useApiMutation<
+    { id: string },
+    {
+      categoryId: string;
+      period: string;
+      limitAmount: number;
+      carryover: boolean;
+    }
+  >((payload) => api.post("/api/budgets", payload), {
+    toastSuccess: "Budget dibuat",
+    onSuccess: () => {
+      setOpen(false);
+      onSaved?.();
+    },
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => { setOpen(v); if (v) setForm(initial); }}
+    >
+      <DialogTrigger asChild={asChild}>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {type === "add" ? "Tambah" : "Edit"} Budget
+          </DialogTitle>
+          <DialogDescription className="hidden sm:block">
+            {type === "add"
+              ? "Atur budget untuk satu kategori pada bulan tertentu."
+              : "Perbarui detail budget Anda."}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!form.categoryId || !form.limitAmount)
+              return toast.error("Lengkapi kategori & nominal");
+
+            if (type === "add") {
+              create.mutate({
+                categoryId: form.categoryId,
+                period: form.period,
+                limitAmount: Number(form.limitAmount),
+                carryover: form.carryover,
+              });
+            }
+          }}
+          className="grid gap-3"
+        >
+          <div className="w-full space-y-1">
+            <label className="text-sm font-medium text-muted-foreground">
+              Periode Budget <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="month"
+              value={form.period}
+              onChange={e => setForm(
+                (f) => ({ ...f, period: e.target.value })
+              )
+            }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="w-full space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">
+                Kategori <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={form.categoryId}
+                onValueChange={(v) => setForm(
+                  (f) => ({ ...f, categoryId: v })
+                )}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(cats?.items ?? []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {(() => {
+                        const IconComponent = getIconComponent(c.icon);
+                        return <IconComponent className="h-5 w-5 m-auto" />;
+                      })()}
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full flex flex-col justify-end mb-1">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-xs font-medium"
+                onClick={async () => {
+                  if (!form.categoryId) return toast.error("Pilih kategori terlebih dahulu");
+
+                  copy.mutate({
+                    categoryId: form.categoryId,
+                    period: form.period
+                  });
+                }}
+                disabled={!form.categoryId || copy.isPending}
+              >
+                <Copy className="w-4.5 h-4.5" /> Copy dari bulan sebelumnya
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="w-full space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">
+                Nilai Budget <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  Rp
+                </span>
+                <Input
+                  placeholder="0"
+                  value={form.limitAmount ? new Intl.NumberFormat('id-ID').format(Number(form.limitAmount)) : '0'}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                    setForm(f => ({...f, limitAmount: value || '0'}));
+                  }}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <div className="w-full flex items-center mt-6">
+              <Checkbox
+                checked={form.carryover}
+                onCheckedChange={(checked) => {
+                  setForm(
+                    f => ({ ...f, carryover: checked === true })
+                  )
+                  if (checked) {
+                    toast.info("Get last period's accumulative carryover amount added to this budget total.");
+                  }
+                }}
+              />
+              <label className="ml-2 text-xs font-medium text-muted-foreground">
+                Tambahkan sisa budget bulan lalu ke budget bulan ini
+              </label>
+            </div>
+          </div>
+          <div className="px-2.5 py-2 rounded-xl bg-secondary flex flex-col gap-1">
+            <div className="flex justify-between items-center text-sm font-medium text-secondary-foreground">
+              <div>Total budget bulan ini</div>
+              <div className="font-semibold">
+                Rp {form.limitAmount ? new Intl.NumberFormat('id-ID').format(Number(form.limitAmount)) : '0'}
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {form.carryover
+                ? "Sisa budget dari bulan sebelumnya akan ditambahkan ke total budget bulan ini."
+                : "Sisa budget dari bulan sebelumnya tidak akan ditambahkan ke total budget bulan ini."}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button type="submit" disabled={create.isPending || copy.isPending}>
+              Simpan
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function currentPeriod() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const getIconComponent = (iconName: string) => {
+  return iconMap[iconName] || Wallet; // Default to Wallet if not found
+};

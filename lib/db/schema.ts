@@ -306,6 +306,8 @@ export const goals = pgTable("goals", {
   startAmount: numeric("start_amount", { precision: 18, scale: 2 })
     .notNull()
     .default("0"),
+  linkedAccountId: uuid("linked_account_id")
+    .references(() => accounts.id, { onDelete: "set null" }),
   note: text("note"),
   color: varchar("color", { length: 7 }),
   icon: varchar("icon", { length: 40 }),

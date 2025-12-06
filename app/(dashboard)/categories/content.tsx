@@ -48,10 +48,6 @@ const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>
   Briefcase,
 };
 
-const getIconComponent = (iconName: string) => {
-  return iconMap[iconName] || Wallet; // Default to Wallet if not found
-};
-
 type Row = {
   id: string;
   name: string;
@@ -621,3 +617,7 @@ export default function CategoriesContent() {
     </div>
   );
 }
+
+const getIconComponent = (iconName: string) => {
+  return iconMap[iconName] || Wallet; // Default to Wallet if not found
+};
