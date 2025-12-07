@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
 import { useApiQuery, useApiMutation, api } from "@/lib/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { toast } from "sonner";
+import { CalendarDays } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type SettingsReq = {
   baseCurrency: string;
@@ -17,26 +24,35 @@ type SettingsReq = {
 };
 
 type SettingsRes = {
-  user: { id:string; name:string|null; email:string|null; image:string|null };
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  };
   settings: {
-    baseCurrency:string;
-    defaultIncomeCategoryId:string|null;
-    defaultIncomeCategoryName:string|null;
-    defaultExpenseCategoryId:string|null;
-    defaultExpenseCategoryName:string|null;
-    offlineMode:"minimal"|"full";
+    baseCurrency: string;
+    defaultIncomeCategoryId: string | null;
+    defaultIncomeCategoryName: string | null;
+    defaultExpenseCategoryId: string | null;
+    defaultExpenseCategoryName: string | null;
+    offlineMode: "minimal" | "full";
   };
 };
 
-export default function SettingsPage(){
+const periodStartDays = Array.from({ length: 28 }, (_, i) => (i + 1).toString());
+
+export default function SettingsPage() {
   const { data, refetch } = useApiQuery<SettingsRes>(
-    ["settings"], () => api.get("/api/settings"), { staleTime: 60000 }
+    ["settings"],
+    () => api.get("/api/settings"),
+    { staleTime: 60000 }
   );
 
-  const save = useApiMutation<{ok:true}, SettingsReq>(
-    (payload)=> api.put("/api/settings", payload),
+  const save = useApiMutation<{ ok: true }, SettingsReq>(
+    (payload) => api.put("/api/settings", payload),
     {
-      toastSuccess:"Pengaturan disimpan",
+      toastSuccess: "Pengaturan disimpan",
       onSuccess: (_res, vars: SettingsReq) => {
         refetch();
         // sinkron ke localStorage & SW
@@ -51,21 +67,41 @@ export default function SettingsPage(){
               });
             }
           }
-        } catch (e) {
+        } catch {
           // abaikan error kecil
         }
-      }
+      },
     }
   );
 
-  const { data: cats } = useApiQuery<{items:{id:string; name:string; kind:"income"|"expense"}[]}>(
-    ["settings-cats"], () => api.get("/api/categories?limit=200&page=1"), { staleTime: 60000 }
-  );
+  const { data: cats } = useApiQuery<{
+    items: { id: string; name: string; kind: "income" | "expense" }[];
+  }>(["settings-cats"], () => api.get("/api/categories?limit=200&page=1"), {
+    staleTime: 60000,
+  });
 
-  const [baseCurrency, setBaseCurrency] = useState<string>(data?.settings?.baseCurrency ?? "IDR");
-  const [offlineMode, setOfflineMode] = useState<"minimal"|"full">((data?.settings?.offlineMode ?? "minimal") as "minimal"|"full");
-  const [incomeCat, setIncomeCat] = useState<string>(data?.settings?.defaultIncomeCategoryId ?? "");
-  const [expenseCat, setExpenseCat] = useState<string>(data?.settings?.defaultExpenseCategoryId ?? "");
+  const [baseCurrency, setBaseCurrency] = useState<string>(
+    data?.settings?.baseCurrency ?? "IDR"
+  );
+  const [offlineMode, setOfflineMode] = useState<"minimal" | "full">(
+    (data?.settings?.offlineMode ?? "minimal") as "minimal" | "full"
+  );
+  const [incomeCat, setIncomeCat] = useState<string>(
+    data?.settings?.defaultIncomeCategoryId ?? ""
+  );
+  const [expenseCat, setExpenseCat] = useState<string>(
+    data?.settings?.defaultExpenseCategoryId ?? ""
+  );
+  const [periodStartDay, setPeriodStartDay] = useState<string>("1");
+  const [appearanceMode, setAppearanceMode] = useState<"light" | "dark">("light");
+  const [applyAppearanceAll, setApplyAppearanceAll] = useState<boolean>(true);
+
+  const handleReset = () => {
+    setBaseCurrency("IDR");
+    setPeriodStartDay("1");
+    setAppearanceMode("light");
+    setApplyAppearanceAll(true);
+  };
 
   useEffect(() => {
     if (!data) return;
@@ -76,10 +112,13 @@ export default function SettingsPage(){
   }, [data]);
 
   // dalam komponen SettingsPage
-  useEffect(()=> {
+  useEffect(() => {
     if (data?.settings?.offlineMode) {
       try {
-        window.localStorage.setItem("wefinansio_offline_mode", data.settings.offlineMode);
+        window.localStorage.setItem(
+          "wefinansio_offline_mode",
+          data.settings.offlineMode
+        );
         if (navigator.serviceWorker?.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: "OFFLINE_MODE",
@@ -91,10 +130,12 @@ export default function SettingsPage(){
   }, [data?.settings?.offlineMode]);
 
   if (!data) {
-    return <div className="text-sm text-muted-foreground">Memuat pengaturan…</div>;
+    return (
+      <div className="text-sm text-muted-foreground">Memuat pengaturan…</div>
+    );
   }
 
-  const { user, settings } = data;
+  const { user } = data;
 
   function handleSave() {
     save.mutate({
@@ -105,114 +146,231 @@ export default function SettingsPage(){
     });
   }
 
-  const incomeCats = (cats?.items ?? []).filter(c => c.kind === "income");
-  const expenseCats = (cats?.items ?? []).filter(c => c.kind === "expense");
+  const incomeCats = (cats?.items ?? []).filter((c) => c.kind === "income");
+  const expenseCats = (cats?.items ?? []).filter((c) => c.kind === "expense");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Pengaturan</h1>
-        <p className="text-sm text-muted-foreground">Atur preferensi weFinansio sesuai kebutuhanmu.</p>
-      </div>
+    <div className="space-y-4">
+      {/* Subtitle */}
+      <h1 className="text-xl font-medium mb-4 text-foreground">
+        Atur preferensi keuangan dan tampilan sesuai kebutuhanmu.
+      </h1>
 
       {/* Profile */}
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="shadow-lg gap-4 py-5 px-6">
+        <CardHeader className="gap-0.5 pb-2">
           <CardTitle className="text-base">Profil</CardTitle>
+          <CardDescription className="text-sm">
+            Data profil mengikuti akun login (Google / email).
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center gap-4">
           <Avatar className="h-14 w-14">
-            {user.image && <AvatarImage src={user.image} alt={user.name ?? ""} />}
-            <AvatarFallback>{(user.name ?? user.email ?? "?").slice(0,2).toUpperCase()}</AvatarFallback>
+            {user.image && (
+              <AvatarImage src={user.image} alt={user.name ?? ""} />
+            )}
+            <AvatarFallback className="bg-secondary text-lg font-medium text-secondary-foreground">
+              {(user.name ?? user.email ?? "?").slice(0, 2).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
-          <div>
-            <div className="font-medium">{user.name ?? "Tanpa nama"}</div>
-            <div className="text-xs text-muted-foreground">{user.email}</div>
-            <div className="mt-1 text-[11px] text-muted-foreground">
-              Data profil mengikuti akun login (Google / email). Perubahan profil bisa dilakukan via provider.
+          <div className="space-y-0.5">
+            <div className="font-medium text-sm">
+              {user.name ?? "Tanpa nama"}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {user.email}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Perubahan profil bisa dilakukan melalui penyedia akun login-mu.
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Finance settings */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Preferensi Keuangan</CardTitle>
+      {/* User settings */}
+      <Card className="shadow-lg gap-4 py-5 px-6">
+        <CardHeader className="pb-2 gap-0.5">
+          <CardTitle className="text-base">
+            Preferensi Keuangan
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Sesuaikan mata uang, periode akuntansi, dan mode tampilan aplikasi.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-xs font-medium">Base currency</label>
-            <Select value={baseCurrency} onValueChange={(v: string) => setBaseCurrency(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="IDR">IDR (Rupiah)</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="EUR">EUR</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Dipakai sebagai mata uang utama laporan & portfolio.
-            </p>
+        <CardContent className="flex gap-8 flex-wrap">
+          {/* Finance preferences */}
+          <div className="flex-1 flex flex-col gap-4">
+            {/* Base currency */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Base currency</label>
+              <Select
+                value={baseCurrency}
+                onValueChange={(v: string) => setBaseCurrency(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IDR">IDR (Rupiah)</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Dipakai sebagai mata uang utama laporan & portfolio.
+              </p>
+            </div>
+
+            {/* Start date of the accounting period */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">
+                Tanggal awal periode akuntansi
+              </label>
+              <Select
+                value={periodStartDay}
+                onValueChange={(v: string) => setPeriodStartDay(v)}
+              >
+                <SelectTrigger className="w-full justify-between">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Setiap tanggal</span>
+                    <SelectValue
+                      placeholder="Pilih tanggal"
+                      className="text-sm font-semibold"
+                    />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {periodStartDays.map((day) => (
+                    <SelectItem key={day} value={day}>
+                      {day.padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Semua laporan dan budget akan mengikuti tanggal mulai ini.
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium">Mode offline</label>
-            <Select value={offlineMode} onValueChange={(v: "minimal" | "full") => setOfflineMode(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">Full (cache + antrean transaksi)</SelectItem>
-                <SelectItem value="minimal">Minimal (hanya cache dasar)</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Mengontrol seberapa agresif PWA menyimpan data & antrean saat offline.
-            </p>
-          </div>
+          {/* Theme preferences */}
+          <div className="flex-1 flex flex-col gap-4">
+            <div className="space-y-2">
+              {/* Theme mode selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">
+                  Mode tampilan
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={appearanceMode === "light" ? "default" : "outline"}
+                    onClick={() => setAppearanceMode("light")}
+                  >
+                    Terang
+                  </Button>
+                  <Button
+                    variant={appearanceMode === "dark" ? "default" : "outline"}
+                    onClick={() => setAppearanceMode("dark")}
+                  >
+                    Gelap
+                  </Button>
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium">Kategori default pemasukan</label>
-            <Select value={incomeCat} onValueChange={(v: string) => setIncomeCat(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no-set">(Tidak diset)</SelectItem>
-                {incomeCats.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Dipakai saat impor / transaksi cepat tanpa kategori pemasukan.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-medium">Kategori default pengeluaran</label>
-            <Select value={expenseCat} onValueChange={(v: string) => setExpenseCat(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no-set">(Tidak diset)</SelectItem>
-                {expenseCats.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Dipakai saat impor / transaksi cepat tanpa kategori pengeluaran.
-            </p>
+              {/* Mode preview */}
+              <div className="rounded-lg border flex items-center justify-between px-3 py-2.5 gap-4 bg-secondary text-xs">
+                <div>
+                  <div className="font-medium">
+                    Pratinjau mode {appearanceMode === "dark" ? "gelap" : "terang"}
+                  </div>
+                  <p className="text-muted-foreground">
+                    Kontras {appearanceMode === "dark" ? "rendah dengan latar gelap, nyaman di malam hari" : "tinggi dengan latar belakang cerah, cocok untuk di siang hari"}.
+                  </p>
+                </div>
+                <div
+                  style={{
+                    width: "120px",
+                    height: "60px",
+                    borderRadius: "var(--radius, 6px)",
+                    background:
+                      appearanceMode === "dark"
+                        ? "hsl(var(--card-dark, 217 33% 17%))"
+                        : "var(--card)",
+                    display: "flex",
+                    flexDirection: "column",
+                    padding: "6px 8px",
+                    gap: "4px",
+                    border: `1px solid ${appearanceMode === "dark" ? "hsl(var(--border-dark, 217 33% 25%))" : "var(--border)"}`,
+                    boxShadow: appearanceMode === "dark"
+                      ? "0 1px 2px rgba(0,0,0,0.3)"
+                      : "0 1px 2px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "60%",
+                      height: "10px",
+                      borderRadius: "999px",
+                      background:
+                        appearanceMode === "dark"
+                          ? "hsl(var(--muted-dark, 217 33% 35%))"
+                          : "var(--muted)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: "40%",
+                      height: "8px",
+                      borderRadius: "999px",
+                      background:
+                        appearanceMode === "dark"
+                          ? "hsl(var(--muted-dark, 217 33% 35%))"
+                          : "var(--muted)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: "80%",
+                      height: "10px",
+                      borderRadius: "999px",
+                      background:
+                        appearanceMode === "dark"
+                          ? "hsl(var(--muted-dark, 217 33% 35%))"
+                          : "var(--muted)",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">
+                Preferensi lainnya
+              </label>
+              <div className="flex items-start gap-2 mt-1">
+                <Checkbox
+                  id="appearance-apply-all"
+                  checked={applyAppearanceAll}
+                  onCheckedChange={(v) => setApplyAppearanceAll(v === true)}
+                />
+                <label
+                  htmlFor="appearance-apply-all"
+                  className="text-xs text-muted-foreground"
+                >
+                  Terapkan mode tampilan ini ke semua perangkat yang terhubung.
+                </label>
+              </div>
+            </div>
           </div>
         </CardContent>
 
-        <CardContent className="border-t mt-4 pt-4 flex justify-end">
-          <Button onClick={handleSave} disabled={save.isPending}>Simpan Pengaturan</Button>
+        <CardContent className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={handleReset}>
+            Reset
+          </Button>
+          <Button onClick={handleSave}>
+            Simpan Pengaturan
+          </Button>
         </CardContent>
       </Card>
     </div>

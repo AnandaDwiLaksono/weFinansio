@@ -20,6 +20,7 @@ const items = [
   { href: "/budgets", label: "Budget" },
   { href: "/goals", label: "Goals" },
   { href: "/reports", label: "Laporan" },
+  { href: "/settings", label: "Pengaturan" },
 ];
 
 export default function HeaderBar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
@@ -49,6 +50,7 @@ export default function HeaderBar({ collapsed, onToggle }: { collapsed: boolean;
   return (
     <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex items-center px-4 py-3 md:px-6">
+        {/* Tablet sidebar toggle */}
         <Button
           variant="ghost"
           size="icon"
@@ -66,7 +68,9 @@ export default function HeaderBar({ collapsed, onToggle }: { collapsed: boolean;
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetTitle className="text-2xl font-semibold">{items.find(item => item.href === pathname)?.label}</SheetTitle>
+          <SheetTitle className="text-2xl font-semibold">
+            {items.find(item => item.href === pathname)?.label}
+          </SheetTitle>
           <SheetContent side="left" className="p-0 w-72">
             <Sidebar collapsed={false} />
           </SheetContent>

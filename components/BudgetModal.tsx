@@ -79,6 +79,7 @@ export default function BudgetModal({
     categoryId: "",
     limitAmount: "",
     carryover: false,
+    accumulatedCarryover: 0,
   },
   onSaved,
 }: {
@@ -90,6 +91,7 @@ export default function BudgetModal({
     categoryId: string;
     limitAmount: string;
     carryover: boolean;
+    accumulatedCarryover: number;
   };
   onSaved?: () => void;
 }) {
@@ -114,17 +116,16 @@ export default function BudgetModal({
     }
   );
 
-  const create = useApiMutation<
-    { id: string },
-    {
-      categoryId: string;
-      period: string;
-      limitAmount: number;
-      carryover: boolean;
-    }
-  >((payload) => api.post("/api/budgets", payload), {
-    toastSuccess: "Budget dibuat",
-    onSuccess: () => {
+  const create = useApiMutation<{ id: string }, {
+    categoryId: string;
+    period: string;
+    limitAmount: number;
+    carryover: boolean;
+  }>(
+    (payload) => api.post("/api/budgets", payload), {
+      onSuccess: () => {
+      toast.success("Budget dibuat");
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
       setOpen(false);
       onSaved?.();
     },
@@ -173,8 +174,7 @@ export default function BudgetModal({
               value={form.period}
               onChange={e => setForm(
                 (f) => ({ ...f, period: e.target.value })
-              )
-            }
+              )}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">

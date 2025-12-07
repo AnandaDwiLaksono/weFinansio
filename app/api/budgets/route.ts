@@ -12,7 +12,7 @@ const ListQuery = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).default(() => {
     const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
   }),
-  kind: z.enum(["income","expense"]).optional(), // filter opsional
+  kind: z.enum(["income", "expense"]).optional(), // filter opsional
   q: z.string().optional(),
 });
 
@@ -22,13 +22,6 @@ const CreateBody = z.object({
   limitAmount: z.number().nonnegative(),
   carryover: z.boolean().optional(),
 });
-
-function periodRange(period: string) {
-  const [y,m] = period.split("-").map(Number);
-  const start = new Date(y, m-1, 1, 0,0,0,0);
-  const end   = new Date(y, m, 0, 23,59,59,999); // last day of month
-  return { start, end };
-}
 
 export const GET = handleApi(async (req: Request) => {
   const session = await getSession();
@@ -52,7 +45,7 @@ export const GET = handleApi(async (req: Request) => {
 
   const whereConditions = [
     eq(budgets.userId, userId),
-    eq(budgets.periodMonth, p.period),
+    eq(budgets.periodMonth, `${p.period}-01`),
     p.kind ? eq(categories.kind, p.kind) : undefined,
     p.q ? ilike(categories.name, `%${p.q}%`) : undefined,
   ].filter(Boolean);
@@ -170,14 +163,20 @@ export const POST = handleApi(async (req: Request) => {
 
   // validasi kepemilikan kategori
   const ownCat = await db.query.categories.findFirst({
-    where: and(eq(categories.id, body.categoryId), eq(categories.userId, userId)),
-    columns: { id: true, kind: true }
+    where: and(
+      eq(categories.id, body.categoryId), eq(categories.userId, userId)
+    ),
+    columns: { id: true }
   });
   if (!ownCat) throw new BadRequestError("Kategori tidak valid.");
 
   // unik per user-category-period
   const dup = await db.query.budgets.findFirst({
-    where: and(eq(budgets.userId, userId), eq(budgets.categoryId, body.categoryId), eq(budgets.periodMonth, body.period)),
+    where: and(
+      eq(budgets.userId, userId),
+      eq(budgets.categoryId, body.categoryId),
+      eq(budgets.periodMonth, `${body.period}-01`)
+    ),
     columns: { id: true }
   });
   if (dup) throw new BadRequestError("Budget untuk kategori & periode ini sudah ada.");
@@ -201,17 +200,16 @@ export const POST = handleApi(async (req: Request) => {
     
     if (prevBudget) {
       // Calculate previous month spent
-      const prevSpentResult = await db
-        .select({
-          spent: sql<string>`SUM(${transactions.amount})::text`
-        })
-        .from(transactions)
-        .where(and(
-          eq(transactions.userId, userId),
-          eq(transactions.categoryId, body.categoryId),
-          eq(transactions.type, "expense"),
-          between(transactions.occurredAt, prevStart, prevEnd)
-        ));
+      const prevSpentResult = await db.select({
+        spent: sql<string>`SUM(${transactions.amount})::text`
+      })
+      .from(transactions)
+      .where(and(
+        eq(transactions.userId, userId),
+        eq(transactions.categoryId, body.categoryId),
+        eq(transactions.type, "expense"),
+        between(transactions.occurredAt, prevStart, prevEnd)
+      ));
       
       const prevSpent = Number(prevSpentResult[0]?.spent || 0);
       const prevLimit = Number(prevBudget.amount || 0);
@@ -228,7 +226,7 @@ export const POST = handleApi(async (req: Request) => {
   const [row] = await db.insert(budgets).values({
     userId,
     categoryId: body.categoryId,
-    periodMonth: body.period,
+    periodMonth: `${body.period}-01`,
     amount: String(body.limitAmount),
     carryover: body.carryover ?? false,
     accumulatedCarryover: String(accumulatedCarryover),
@@ -238,7 +236,16 @@ export const POST = handleApi(async (req: Request) => {
 });
 
 function prevPeriod(p: string) {
-  const [y,m] = p.split("-").map(Number);
-  const d = new Date(y, m-2, 1);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  const [y, m] = p.split("-").map(Number);
+  const d = new Date(y, m - 2, 1);
+
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function periodRange(period: string) {
+  const [y, m] = period.split("-").map(Number);
+  const start = new Date(y, m - 1, 1, 0, 0, 0, 0);
+  const end   = new Date(y, m, 0, 23, 59, 59, 999); // last day of month
+
+  return { start, end };
 }

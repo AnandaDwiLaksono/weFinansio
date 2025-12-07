@@ -51,7 +51,11 @@ export default function BudgetsContent() {
 
   const { data, refetch } = useApiQuery<Res>(
     ["budgets", { period, kind, q }],
-    () => api.get("/api/budgets?" + new URLSearchParams({ period, kind, q })),
+    () => {
+      const params = new URLSearchParams({ period, q });
+      if (kind) params.set("kind", kind);
+      return api.get("/api/budgets?" + params.toString());
+    },
     { placeholderData: keepPreviousData }
   );
 

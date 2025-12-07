@@ -35,18 +35,25 @@ export const GET = handleApi(async (req: Request) => {
 
   const budget = await db.query.budgets.findFirst({
     where: and(
-      eq(budgets.id, id),
+      eq(budgets.categoryId, id),
       eq(budgets.userId, userId),
-      eq(budgets.periodMonth, p.lastPeriodMonth)
+      eq(budgets.periodMonth, prevPeriod(p.lastPeriodMonth))
     ),
     columns: { amount: true }
   });
   if (!budget) throw new NotFoundError("Budget not found.");
 
-  return { budget };
+  return { amount: budget.amount };
 });
 
 function currentPeriod() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function prevPeriod(p: string) {
+  const [y, m, d] = p.split("-").map(Number);
+  const date = new Date(y, m - 2, d);
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }

@@ -273,13 +273,16 @@ export const budgets = pgTable("budgets", {
   periodMonth: date("period_month").notNull(), // gunakan tanggal 1 (YYYY-MM-01)
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
   carryover: boolean("carryover").notNull().default(false),
-  accumulatedCarryover: numeric("accumulated_carryover", { precision: 18, scale: 2 })
-    .notNull()
-    .default("0"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-},
-(t) => [
+  accumulatedCarryover: numeric("accumulated_carryover", { 
+    precision: 18, scale: 2
+  }).notNull().default("0"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+}, (t) => [
   uniqueIndex("budgets_user_cat_period_uq").on(
     t.userId,
     t.categoryId,
