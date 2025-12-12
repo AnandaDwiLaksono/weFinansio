@@ -279,6 +279,7 @@ export default function CategoriesContent() {
                     <TableCell className="text-right">
                       <div className="flex justify-center gap-1.5 items-center">
                         <CategoryModal
+                          asChild
                           type="edit"
                           id={c.id}
                           initial={{
@@ -385,8 +386,8 @@ export default function CategoriesContent() {
                 
                 return (
                   <div key={key} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <div className={`h-2 w-2 rounded-full ${
                           key === 'income' ? 'bg-green-500' : 'bg-red-500'
                         }`}></div>
@@ -484,6 +485,7 @@ export default function CategoriesContent() {
                   </div>
                   <div className="flex gap-2">
                     <CategoryModal
+                      asChild
                       type="edit"
                       id={c.id}
                       initial={{

@@ -39,7 +39,9 @@ import {
 import { Checkbox } from "./ui/checkbox";
 
 // Icon mapper
-const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+const iconMap: Record<
+  string, React.ComponentType<React.SVGProps<SVGSVGElement>>
+> = {
   Wallet,
   Utensils,
   ShoppingCart,
@@ -74,8 +76,9 @@ export default function BudgetModal({
   asChild = false,
   children,
   type,
+  startDate = 1,
   initial = {
-    period: currentPeriod(),
+    period: currentPeriod(startDate),
     categoryId: "",
     limitAmount: "",
     carryover: false,
@@ -86,6 +89,7 @@ export default function BudgetModal({
   asChild?: boolean;
   children?: React.ReactNode;
   type?: "add" | "edit";
+  startDate?: number;
   initial?: {
     period: string;
     categoryId: string;
@@ -144,7 +148,7 @@ export default function BudgetModal({
           </DialogTitle>
           <DialogDescription className="hidden sm:block">
             {type === "add"
-              ? "Atur budget untuk satu kategori pada bulan tertentu."
+              ? "Atur budget untuk satu kategori pada periode tertentu."
               : "Perbarui detail budget Anda."}
           </DialogDescription>
         </DialogHeader>
@@ -219,7 +223,8 @@ export default function BudgetModal({
                 }}
                 disabled={!form.categoryId || copy.isPending}
               >
-                <Copy className="w-4.5 h-4.5" /> Copy dari bulan sebelumnya
+                <Copy className="w-4.5 h-4.5" /> 
+                <span className="text-wrap text-left">Copy dari periode sebelumnya</span>
               </Button>
             </div>
           </div>
@@ -243,7 +248,7 @@ export default function BudgetModal({
                 />
               </div>
             </div>
-            <div className="w-full flex items-center mt-6">
+            <div className="w-full flex items-center lg:mt-6 mt-4">
               <Checkbox
                 checked={form.carryover}
                 onCheckedChange={(checked) => {
@@ -291,9 +296,15 @@ export default function BudgetModal({
   );
 }
 
-function currentPeriod() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+function currentPeriod(startDate: number = 1) {
+  const [y, m, d] = new Date().toISOString().split("T")[0].split("-").map(Number);
+  if (d < startDate) {
+    const prevMonth = m - 1 === 0 ? 12 : m - 1;
+    const prevYear = prevMonth === 12 ? y - 1 : y;
+    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+  } else {
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
 }
 
 const getIconComponent = (iconName: string) => {

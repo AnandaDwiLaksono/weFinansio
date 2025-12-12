@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pencil, Trash2, Calendar, Plus } from "lucide-react";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 
 import { useApiQuery, useApiMutation, api } from "@/lib/react-query";
 import {
@@ -22,7 +23,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import BudgetModal from "@/components/BudgetModal";
 import EditBudgetModal from "@/components/EditBudgetModal";
-import { keepPreviousData } from "@tanstack/react-query";
 import BudgetDonut from "@/components/BudgetDonut";
 
 type Item = {
@@ -45,6 +45,18 @@ type Res = {
 };
 
 export default function BudgetsContent() {
+  const queryClient = useQueryClient();
+
+  const { data: user } = useApiQuery<{
+    settings: { startDatePeriod: number }
+  }>(
+    ["settings"],
+    () => api.get("/api/settings"),
+    { placeholderData: keepPreviousData }
+  );
+
+  const startDate = Number(user?.settings.startDatePeriod ?? 1);
+
   const [period, setPeriod] = useState(currentPeriod());
   const [kind, setKind] = useState<"" | "income" | "expense">("");
   const [q, setQ] = useState("");
@@ -91,7 +103,7 @@ export default function BudgetsContent() {
           </p>
         </div>
         <div className="hidden md:flex gap-2">
-          <BudgetModal asChild type="add" onSaved={refetch}>
+          <BudgetModal asChild type="add" onSaved={refetch} startDate={startDate}>
             <Button size="sm" className="cursor-pointer">
               <Plus className="h-4 w-4 mr-2" /> Tambah Akun
             </Button>

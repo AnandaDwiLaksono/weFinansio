@@ -272,6 +272,7 @@ export default function AccountsContent() {
                     <TableCell className="text-right">
                       <div className="flex justify-center gap-1.5 items-center">
                         <AccountModal
+                          asChild
                           type="edit"
                           id={a.id}
                           initial={{
@@ -377,8 +378,8 @@ export default function AccountsContent() {
                 
                 return (
                   <div key={key} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <div className={`h-2 w-2 rounded-full ${
                           key === 'cash' ? 'bg-blue-500' : 
                           key === 'bank' ? 'bg-blue-600' : 
@@ -471,6 +472,7 @@ export default function AccountsContent() {
                 </div>
                 <div className="flex gap-2">
                   <AccountModal
+                    asChild
                     type="edit"
                     id={a.id}
                     initial={{

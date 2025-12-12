@@ -84,7 +84,7 @@ export default function SettingsPage() {
     data?.settings?.startDatePeriod ?? "1"
   );
   const [appearanceMode, setAppearanceMode] = useState<"light" | "dark">(
-    data?.settings?.themeMode ? (window.localStorage.getItem("wefinansio_theme_mode") === "dark" ? "dark" : "light") : "light"
+    data?.settings?.themeMode ? data.settings.themeMode : (window.localStorage.getItem("wefinansio_theme_mode") ? "dark" : "light")
   );
   const [applyAppearanceAll, setApplyAppearanceAll] = useState<boolean>(true);
 
@@ -120,7 +120,7 @@ export default function SettingsPage() {
     setBaseCurrency(data.settings.baseCurrency);
     setPeriodStartDay(data.settings.startDatePeriod);
     setAppearanceMode(
-      data.settings.themeMode ? (window.localStorage.getItem("wefinansio_theme_mode") === "dark" ? "dark" : "light") : "light"
+      data.settings.themeMode ? data.settings.themeMode : (window.localStorage.getItem("wefinansio_theme_mode") ? "dark" : "light")
     );
     setOfflineMode(data.settings.offlineMode);
   }, [data]);
