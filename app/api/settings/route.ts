@@ -1,17 +1,21 @@
 export const runtime = "nodejs";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db";
-import { users, userSettings, categories } from "@/lib/db/schema";
+import { users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { UnauthorizedError } from "@/lib/errors";
 
 const UpdateBody = z.object({
   baseCurrency: z.string().length(3).optional(),
-  defaultIncomeCategoryId: z.string().uuid().nullable().optional(),
-  defaultExpenseCategoryId: z.string().uuid().nullable().optional(),
+  startDatePeriod: z.string().refine((val) => {
+    const num = Number(val);
+    return Number.isInteger(num) && num >= 1 && num <= 28;
+  }).optional(),
+  themeMode: z.enum(["light", "dark"]).optional(),
   offlineMode: z.enum(["minimal","full"]).optional(),
 });
 
@@ -47,25 +51,12 @@ export const GET = handleApi(async (_req: Request) => {
     settings = created;
   }
 
-  // ambil nama kategori default
-  const catIds = [settings.defaultIncomeCategoryId, settings.defaultExpenseCategoryId].filter(Boolean) as string[];
-  let catMap = new Map<string,string>();
-  if (catIds.length) {
-    const cats = await db.query.categories.findMany({
-      where: (c, { inArray }) => inArray(c.id, catIds),
-      columns: { id:true, name:true },
-    });
-    catMap = new Map(cats.map(c => [c.id, c.name]));
-  }
-
   return {
     user,
     settings: {
       baseCurrency: settings.baseCurrency,
-      defaultIncomeCategoryId: settings.defaultIncomeCategoryId,
-      defaultIncomeCategoryName: settings.defaultIncomeCategoryId ? catMap.get(settings.defaultIncomeCategoryId) ?? null : null,
-      defaultExpenseCategoryId: settings.defaultExpenseCategoryId,
-      defaultExpenseCategoryName: settings.defaultExpenseCategoryId ? catMap.get(settings.defaultExpenseCategoryId) ?? null : null,
+      startDatePeriod: settings.startDatePeriod,
+      themeMode: settings.themeMode,
       offlineMode: settings.offlineMode,
     },
   };

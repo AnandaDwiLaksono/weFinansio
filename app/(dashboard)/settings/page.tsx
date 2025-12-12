@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { useApiQuery, useApiMutation, api } from "@/lib/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +19,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 type SettingsReq = {
   baseCurrency: string;
+  startDatePeriod: string;
+  themeMode: "light" | "dark";
   offlineMode: "minimal" | "full";
-  defaultIncomeCategoryId: string | null;
-  defaultExpenseCategoryId: string | null;
 };
 
 type SettingsRes = {
@@ -32,10 +33,8 @@ type SettingsRes = {
   };
   settings: {
     baseCurrency: string;
-    defaultIncomeCategoryId: string | null;
-    defaultIncomeCategoryName: string | null;
-    defaultExpenseCategoryId: string | null;
-    defaultExpenseCategoryName: string | null;
+    startDatePeriod: string;
+    themeMode: "light" | "dark";
     offlineMode: "minimal" | "full";
   };
 };
@@ -54,6 +53,7 @@ export default function SettingsPage() {
     {
       toastSuccess: "Pengaturan disimpan",
       onSuccess: (_res, vars: SettingsReq) => {
+        toast.success("Pengaturan disimpan");
         refetch();
         // sinkron ke localStorage & SW
         try {
@@ -74,26 +74,18 @@ export default function SettingsPage() {
     }
   );
 
-  const { data: cats } = useApiQuery<{
-    items: { id: string; name: string; kind: "income" | "expense" }[];
-  }>(["settings-cats"], () => api.get("/api/categories?limit=200&page=1"), {
-    staleTime: 60000,
-  });
-
   const [baseCurrency, setBaseCurrency] = useState<string>(
     data?.settings?.baseCurrency ?? "IDR"
   );
   const [offlineMode, setOfflineMode] = useState<"minimal" | "full">(
-    (data?.settings?.offlineMode ?? "minimal") as "minimal" | "full"
+    data?.settings?.offlineMode ?? "minimal"
   );
-  const [incomeCat, setIncomeCat] = useState<string>(
-    data?.settings?.defaultIncomeCategoryId ?? ""
+  const [periodStartDay, setPeriodStartDay] = useState<string>(
+    data?.settings?.startDatePeriod ?? "1"
   );
-  const [expenseCat, setExpenseCat] = useState<string>(
-    data?.settings?.defaultExpenseCategoryId ?? ""
+  const [appearanceMode, setAppearanceMode] = useState<"light" | "dark">(
+    data?.settings?.themeMode ? (window.localStorage.getItem("wefinansio_theme_mode") === "dark" ? "dark" : "light") : "light"
   );
-  const [periodStartDay, setPeriodStartDay] = useState<string>("1");
-  const [appearanceMode, setAppearanceMode] = useState<"light" | "dark">("light");
   const [applyAppearanceAll, setApplyAppearanceAll] = useState<boolean>(true);
 
   const handleReset = () => {
@@ -101,14 +93,36 @@ export default function SettingsPage() {
     setPeriodStartDay("1");
     setAppearanceMode("light");
     setApplyAppearanceAll(true);
+
+    window.localStorage.removeItem("wefinansio_theme_mode");
+  };
+
+  const handleSave = () => {
+    window.localStorage.setItem("wefinansio_theme_mode", appearanceMode);
+    
+    // Apply theme immediately
+    if (appearanceMode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+
+    save.mutate({
+      baseCurrency,
+      startDatePeriod: periodStartDay,
+      themeMode: appearanceMode,
+      offlineMode,
+    });
   };
 
   useEffect(() => {
     if (!data) return;
     setBaseCurrency(data.settings.baseCurrency);
+    setPeriodStartDay(data.settings.startDatePeriod);
+    setAppearanceMode(
+      data.settings.themeMode ? (window.localStorage.getItem("wefinansio_theme_mode") === "dark" ? "dark" : "light") : "light"
+    );
     setOfflineMode(data.settings.offlineMode);
-    setIncomeCat(data.settings.defaultIncomeCategoryId ?? "");
-    setExpenseCat(data.settings.defaultExpenseCategoryId ?? "");
   }, [data]);
 
   // dalam komponen SettingsPage
@@ -136,18 +150,6 @@ export default function SettingsPage() {
   }
 
   const { user } = data;
-
-  function handleSave() {
-    save.mutate({
-      baseCurrency,
-      offlineMode,
-      defaultIncomeCategoryId: incomeCat || null,
-      defaultExpenseCategoryId: expenseCat || null,
-    });
-  }
-
-  const incomeCats = (cats?.items ?? []).filter((c) => c.kind === "income");
-  const expenseCats = (cats?.items ?? []).filter((c) => c.kind === "expense");
 
   return (
     <div className="space-y-4">
@@ -343,6 +345,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+            
             <div className="space-y-1.5">
               <label className="text-xs font-medium">
                 Preferensi lainnya

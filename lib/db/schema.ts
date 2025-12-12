@@ -56,6 +56,11 @@ export const portfolioTxType = pgEnum("portfolio_tx_type", [
   "TRANSFER_OUT",
 ]);
 
+export const themeModeType = pgEnum("theme_mode_type", [
+  "light",
+  "dark",
+]);
+
 /* =========================
    Core
 ========================= */
@@ -218,10 +223,10 @@ export const userSettings = pgTable("user_settings", {
   baseCurrency: char("base_currency", { length: 3 })
     .notNull()
     .default("IDR"),
-  defaultIncomeCategoryId: uuid("default_income_category_id")
-    .references(() => categories.id),
-  defaultExpenseCategoryId: uuid("default_expense_category_id")
-    .references(() => categories.id),
+  startDatePeriod: numeric("start_date_period", { precision: 2, scale: 0 })
+    .notNull()
+    .default("1"), // 1-28
+  themeMode: themeModeType("theme_mode"),
   offlineMode: text("offline_mode")
     .notNull()
     .default("full"), // "minimal" | "full"
