@@ -10,7 +10,7 @@ import { handleApi } from "@/lib/http";
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
 
 const ListQuery = z.object({
-  lastPeriodMonth: z.string().regex(/^\d{4}-\d{2}-01$/).default(currentPeriod()),
+  lastPeriodMonth: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -22,7 +22,6 @@ export const GET = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
-
     if (u) userId = u.id;
   }
 
@@ -46,14 +45,9 @@ export const GET = handleApi(async (req: Request) => {
   return { amount: budget.amount };
 });
 
-function currentPeriod() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
 function prevPeriod(p: string) {
-  const [y, m, d] = p.split("-").map(Number);
-  const date = new Date(y, m - 2, d);
+  const [y, m] = p.split("-").map(Number);
+  const date = new Date(y, m - 2);
 
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }

@@ -37,4 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 <=============================================================================================================================>
 
-Next sesuaikan copy nilai budget berdasarkan tanggal awal periode akuntansi
+Next implementasi button edit dan delete pada table desktop menu budget

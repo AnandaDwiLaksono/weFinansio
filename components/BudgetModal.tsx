@@ -84,7 +84,6 @@ export default function BudgetModal({
     carryover: false,
     accumulatedCarryover: 0,
   },
-  onSaved,
 }: {
   asChild?: boolean;
   children?: React.ReactNode;
@@ -97,7 +96,6 @@ export default function BudgetModal({
     carryover: boolean;
     accumulatedCarryover: number;
   };
-  onSaved?: () => void;
 }) {
   const queryClient = useQueryClient();
 
@@ -111,11 +109,21 @@ export default function BudgetModal({
   );
 
   const copy = useApiMutation<{ amount: number }, { categoryId: string; period: string }>(
-    ({ categoryId, period }) => api.get(`/api/budgets/${categoryId}/copy?lastPeriodMonth=${period}-01`),
+    ({ categoryId, period }) => api.get(`/api/budgets/${categoryId}/copy?lastPeriodMonth=${period}`),
     {
       onSuccess: (data) => {
         setForm((f) => ({ ...f, limitAmount: data.amount.toString() }));
-        toast.success("Berhasil menyalin nominal dari bulan sebelumnya");
+        toast.success("Berhasil menyalin nominal dari periode sebelumnya");
+      }
+    }
+  );
+
+  const getAccumulatedCarryover = useApiMutation<{ accumulatedCarryover: number }, { categoryId: string; period: string }>(
+    ({ categoryId, period }) => api.get(`/api/budgets/${categoryId}?periodMonth=${period}`),
+    {
+      onSuccess: (data) => {
+        setForm((f) => ({ ...f, accumulatedCarryover: data.accumulatedCarryover }));
+        toast.success("Berhasil mendapatkan sisa budget dari periode sebelumnya");
       }
     }
   );
@@ -131,7 +139,6 @@ export default function BudgetModal({
       toast.success("Budget dibuat");
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
       setOpen(false);
-      onSaved?.();
     },
   });
 
@@ -255,8 +262,14 @@ export default function BudgetModal({
                   setForm(
                     f => ({ ...f, carryover: checked === true })
                   )
+
                   if (checked) {
                     toast.info("Get last period's accumulative carryover amount added to this budget total.");
+                    
+                    getAccumulatedCarryover.mutate({
+                      categoryId: form.categoryId,
+                      period: form.period
+                    });
                   }
                 }}
               />
@@ -269,13 +282,16 @@ export default function BudgetModal({
             <div className="flex justify-between items-center text-sm font-medium text-secondary-foreground">
               <div>Total budget bulan ini</div>
               <div className="font-semibold">
-                Rp {form.limitAmount ? new Intl.NumberFormat('id-ID').format(Number(form.limitAmount)) : '0'}
+                Rp {new Intl.NumberFormat('id-ID').format(
+                  Number(form.limitAmount) + 
+                  (form.carryover ? form.accumulatedCarryover : 0)
+                )}
               </div>
             </div>
             <div className="text-xs text-muted-foreground">
               {form.carryover
-                ? "Sisa budget dari bulan sebelumnya akan ditambahkan ke total budget bulan ini."
-                : "Sisa budget dari bulan sebelumnya tidak akan ditambahkan ke total budget bulan ini."}
+                ? `Sisa budget dari periode sebelumnya sebesar Rp ${new Intl.NumberFormat('id-ID').format(form.accumulatedCarryover)} telah ditambahkan ke total budget periode ini.`
+                : "Sisa budget dari periode sebelumnya tidak akan ditambahkan ke total budget periode ini."}
             </div>
           </div>
           <div className="flex justify-end gap-2">

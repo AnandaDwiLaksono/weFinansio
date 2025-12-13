@@ -2,23 +2,22 @@ export const runtime = "nodejs";
 
 import { and, between, eq, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db";
-import { budgets, categories, transactions, users } from "@/lib/db/schema";
+import { budgets, categories, transactions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";
+import { effect } from "zod/v3";
 
 const ListQuery = z.object({
-  period: z.string().regex(/^\d{4}-\d{2}$/).default(() => {
-    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-  }),
-  kind: z.enum(["income", "expense"]).optional(), // filter opsional
+  period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
   q: z.string().optional(),
 });
 
 const CreateBody = z.object({
-  categoryId: z.uuid(),
   period: z.string().regex(/^\d{4}-\d{2}$/),
+  categoryId: z.uuid(),
   limitAmount: z.number().nonnegative(),
   carryover: z.boolean().optional(),
 });
@@ -39,14 +38,21 @@ export const GET = handleApi(async (req: Request) => {
 
   const url = new URL(req.url);
   const p = ListQuery.parse(Object.fromEntries(url.searchParams));
+
+  // Get start date of the period
+  const startDate = await db.query.userSettings.findFirst({
+    where: eq(userSettings.userId, userId),
+    columns: { startDatePeriod: true }
+  });
+
+  const startDatePeriod = Number(startDate?.startDatePeriod) || 1;
   const prev = prevPeriod(p.period);
-  const { start: prevStart, end: prevEnd } = periodRange(prev);
-  const { start, end } = periodRange(p.period);
+  const { start: prevStart, end: prevEnd } = periodRange(prev, startDatePeriod);
+  const { start, end } = periodRange(p.period, startDatePeriod);
 
   const whereConditions = [
     eq(budgets.userId, userId),
-    eq(budgets.periodMonth, `${p.period}-01`),
-    p.kind ? eq(categories.kind, p.kind) : undefined,
+    eq(budgets.periodMonth, p.period),
     p.q ? ilike(categories.name, `%${p.q}%`) : undefined,
   ].filter(Boolean);
   const where = whereConditions as NonNullable<typeof whereConditions[number]>[];
@@ -60,10 +66,7 @@ export const GET = handleApi(async (req: Request) => {
       carryover: budgets.carryover,
       accumulatedCarryover: sql<string>`${budgets.accumulatedCarryover}::text`,
       categoryId: categories.id,
-      categoryName: categories.name,
-      categoryKind: categories.kind,
-      categoryColor: categories.color,
-      categoryIcon: categories.icon,
+      categoryName: categories.name
     })
     .from(budgets)
     .leftJoin(categories, eq(categories.id, budgets.categoryId))
@@ -124,25 +127,39 @@ export const GET = handleApi(async (req: Request) => {
     const spent = spentMap.get(r.categoryId ?? "null") || 0;
 
     const effectiveLimit = limit + accumulated;
-    const remaining = Math.max(0, effectiveLimit - spent);
-    const progress = effectiveLimit>0 ? Math.min(1, spent/effectiveLimit) : 0;
+    const remaining = effectiveLimit - spent;
+    const progress = effectiveLimit > 0 ? spent / effectiveLimit : 0;
     return { 
-      ...r, 
-      limit, 
-      spent, 
-      remaining, 
-      progress, 
-      effectiveLimit, 
+      ...r,
+      limit,
+      spent,
+      remaining,
+      progress,
+      effectiveLimit,
       accumulatedCarryover: accumulated,
-      prevPeriod: prev 
+      prevPeriod: prev
     };
   });
 
   // ringkasan total
-  const totalLimit = items.reduce((s,i)=> s+i.limit, 0);
-  const totalSpent = items.reduce((s,i)=> s+i.spent, 0);
+  const totalLimit = items.reduce((s, i)=> s + i.limit, 0);
+  const totalEffectiveLimit = items.reduce((s, i)=> s + i.effectiveLimit, 0);
+  const totalSpent = items.reduce((s, i)=> s + i.spent, 0);
+  const totalAlmostOver = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.progress >= 0.8 ? 1 : 0), 0);
+  const totalOverBudget = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.spent > i.effectiveLimit ? 1 : 0), 0);
 
-  return { period: p.period, items, total: { limit: totalLimit, spent: totalSpent, remaining: Math.max(0,totalLimit-totalSpent) } };
+  return {
+    period: p.period,
+    items,
+    total: {
+      limit: totalLimit,
+      effectiveLimit: totalEffectiveLimit,
+      spent: totalSpent,
+      remaining: totalEffectiveLimit - totalSpent,
+      almostOver: totalAlmostOver,
+      overBudget: totalOverBudget,
+    }
+  };
 });
 
 export const POST = handleApi(async (req: Request) => {
@@ -175,7 +192,7 @@ export const POST = handleApi(async (req: Request) => {
     where: and(
       eq(budgets.userId, userId),
       eq(budgets.categoryId, body.categoryId),
-      eq(budgets.periodMonth, `${body.period}-01`)
+      eq(budgets.periodMonth, body.period)
     ),
     columns: { id: true }
   });
@@ -185,8 +202,15 @@ export const POST = handleApi(async (req: Request) => {
   let accumulatedCarryover = 0;
   
   if (body.carryover) {
+    // Get start date of the period
+    const startDate = await db.query.userSettings.findFirst({
+      where: eq(userSettings.userId, userId),
+      columns: { startDatePeriod: true }
+    });
+
+    const startDatePeriod = Number(startDate?.startDatePeriod) || 1;
     const prev = prevPeriod(body.period);
-    const { start: prevStart, end: prevEnd } = periodRange(prev);
+    const { start: prevStart, end: prevEnd } = periodRange(prev, startDatePeriod);
     
     // Get previous budget
     const prevBudget = await db.query.budgets.findFirst({
@@ -219,14 +243,14 @@ export const POST = handleApi(async (req: Request) => {
       const prevEffectiveLimit = prevLimit + prevAccumulated;
       
       // Remaining from previous month becomes new accumulated carryover
-      accumulatedCarryover = Math.max(0, prevEffectiveLimit - prevSpent);
+      accumulatedCarryover = prevEffectiveLimit - prevSpent;
     }
   }
 
   const [row] = await db.insert(budgets).values({
     userId,
     categoryId: body.categoryId,
-    periodMonth: `${body.period}-01`,
+    periodMonth: body.period,
     amount: String(body.limitAmount),
     carryover: body.carryover ?? false,
     accumulatedCarryover: String(accumulatedCarryover),
@@ -239,13 +263,13 @@ function prevPeriod(p: string) {
   const [y, m] = p.split("-").map(Number);
   const d = new Date(y, m - 2, 1);
 
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function periodRange(period: string) {
+function periodRange(period: string, startDate: number = 1) {
   const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, 1, 0, 0, 0, 0);
-  const end   = new Date(y, m, 0, 23, 59, 59, 999); // last day of month
+  const start = new Date(y, m - 1, startDate, 0, 0, 0, 0);
+  const end   = new Date(y, m, startDate - 1, 23, 59, 59, 999); // last day of month
 
   return { start, end };
 }

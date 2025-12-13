@@ -1,0 +1,1 @@
+ALTER TABLE "budgets" ALTER COLUMN "period_month" SET DATA TYPE varchar(7);

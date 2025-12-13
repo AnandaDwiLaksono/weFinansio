@@ -275,7 +275,7 @@ export const budgets = pgTable("budgets", {
   categoryId: uuid("category_id")
     .notNull()
     .references(() => categories.id, { onDelete: "cascade" }),
-  periodMonth: date("period_month").notNull(), // gunakan tanggal 1 (YYYY-MM-01)
+  periodMonth: varchar("period_month", { length: 7 }).notNull(), // gunakan format (YYYY-MM)
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
   carryover: boolean("carryover").notNull().default(false),
   accumulatedCarryover: numeric("accumulated_carryover", { 

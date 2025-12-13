@@ -84,7 +84,7 @@ export default function SettingsPage() {
     data?.settings?.startDatePeriod ?? "1"
   );
   const [appearanceMode, setAppearanceMode] = useState<"light" | "dark">(
-    data?.settings?.themeMode ? data.settings.themeMode : (window.localStorage.getItem("wefinansio_theme_mode") ? "dark" : "light")
+    data?.settings?.themeMode ? data.settings.themeMode : "light"
   );
   const [applyAppearanceAll, setApplyAppearanceAll] = useState<boolean>(true);
 
@@ -119,10 +119,21 @@ export default function SettingsPage() {
     if (!data) return;
     setBaseCurrency(data.settings.baseCurrency);
     setPeriodStartDay(data.settings.startDatePeriod);
-    setAppearanceMode(
-      data.settings.themeMode ? data.settings.themeMode : (window.localStorage.getItem("wefinansio_theme_mode") ? "dark" : "light")
-    );
     setOfflineMode(data.settings.offlineMode);
+    // set initial appearance from settings or localStorage safely on client
+    const localTheme =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("wefinansio_theme_mode")
+        : null;
+
+    const initial =
+      data?.settings?.themeMode
+        ? data.settings.themeMode
+        : localTheme
+          ? "dark"
+          : "light";
+
+    setAppearanceMode(initial);
   }, [data]);
 
   // dalam komponen SettingsPage
