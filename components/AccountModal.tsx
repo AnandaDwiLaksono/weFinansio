@@ -34,11 +34,18 @@ export default function AccountModal({
   children,
   type,
   id = "",
-  initial = { name: "", type: "cash", currency: "IDR", balance: 0, archived: false, note: "" }
+  initial = {
+    name: "",
+    type: "cash",
+    currency: "IDR",
+    balance: 0,
+    archived: false,
+    note: ""
+  }
 }: {
   asChild?: boolean;
   children?: React.ReactNode;
-  type?: string | 'add' | 'edit';
+  type?: 'add' | 'edit';
   id?: string;
   initial?: {
     name: string;

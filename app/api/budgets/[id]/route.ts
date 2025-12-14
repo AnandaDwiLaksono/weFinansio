@@ -14,7 +14,7 @@ const ListQuery = z.object({
 const UpdateBody = z.object({
   limitAmount: z.number().nonnegative().optional(),
   carryover: z.boolean().optional(),
-  accumulatedCarryover: z.number().nonnegative().optional(),
+  accumulatedCarryover: z.number().optional(),
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -107,6 +107,7 @@ export const PATCH = handleApi(async (req: Request) => {
   if (!own) throw new NotFoundError("Budget tidak ditemukan.");
 
   const body = UpdateBody.parse(await req.json());
+
   await db.update(budgets).set({
     amount: typeof body.limitAmount === "number" ? String(body.limitAmount) : undefined,
     carryover: typeof body.carryover === "boolean" ? body.carryover : undefined,

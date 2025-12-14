@@ -13,6 +13,8 @@ import { effect } from "zod/v3";
 const ListQuery = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
   q: z.string().optional(),
+  page: z.string().optional(),
+  limit: z.string().optional(),
 });
 
 const CreateBody = z.object({
@@ -57,6 +59,8 @@ export const GET = handleApi(async (req: Request) => {
   ].filter(Boolean);
   const where = whereConditions as NonNullable<typeof whereConditions[number]>[];
 
+  const offset = (Number(p.page) - 1) * Number(p.limit);
+
   // ambil budget + kategori
   const rows = await db
     .select({
@@ -71,7 +75,9 @@ export const GET = handleApi(async (req: Request) => {
     .from(budgets)
     .leftJoin(categories, eq(categories.id, budgets.categoryId))
     .where(and(...where))
-    .orderBy(categories.name);
+    .orderBy(categories.name)
+    .limit(Number(p.limit))
+    .offset(offset);
 
   // ambil SPENT bulan lalu per kategori
   const prevSpentRows = await db

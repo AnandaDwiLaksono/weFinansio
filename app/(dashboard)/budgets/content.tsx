@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2, Plus, Search, Copy } from "lucide-react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,25 +14,26 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import BudgetModal from "@/components/BudgetModal";
 import EditBudgetModal from "@/components/EditBudgetModal";
-import BudgetDonut from "@/components/BudgetDonut";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import ConfirmationModal from "@/components/ConfirmationModal";
 
 type Item = {
   id: string;
   period: string;
   limit: number;
+  limitAmount: string;
+  carryover: boolean;
   accumulatedCarryover: number;
   effectiveLimit: number;
   spent: number;
@@ -74,9 +75,9 @@ export default function BudgetsContent() {
   const limit = 20;
 
   const { data } = useApiQuery<Res>(
-    ["budgets", { period, q }],
+    ["budgets", { period, q, page, limit }],
     () => {
-      const params = new URLSearchParams({ period, q });
+      const params = new URLSearchParams({ period, q, page: String(page), limit: String(limit) });
 
       return api.get("/api/budgets?" + params.toString());
     },
@@ -112,7 +113,11 @@ export default function BudgetsContent() {
     overBudget: 0
   };
 
-  console.log({ items, total, period });
+  useEffect(() => {
+    setPeriod(currentPeriod(startDate));
+    setQ("");
+    setPage(1);
+  }, [startDate]);
 
   return (
     <div className="space-y-6">
@@ -296,7 +301,17 @@ export default function BudgetsContent() {
                         <div className="flex justify-center gap-1.5 items-center">
                           <BudgetModal
                             asChild
-                            type="edit">
+                            type="edit"
+                            id={a.id}
+                            startDate={startDate}
+                            initial={{
+                              period: period,
+                              categoryId: a.categoryId,
+                              limitAmount: a.limitAmount,
+                              carryover: a.carryover,
+                              accumulatedCarryover: a.accumulatedCarryover
+                            }}
+                          >
                             <Button
                               variant="secondary"
                               size="icon"
@@ -308,7 +323,7 @@ export default function BudgetsContent() {
                           </BudgetModal>
                           <ConfirmationModal
                             title="Hapus Budget"
-                            description={`Apakah Anda yakin ingin menghapus budet "${a.categoryName}"? Tindakan ini tidak dapat dibatalkan.`}
+                            description={`Apakah Anda yakin ingin menghapus budget "${a.categoryName}"? Tindakan ini tidak dapat dibatalkan.`}
                             confirmText="Hapus"
                             cancelText="Batal"
                             onConfirm={() => del.mutate({ id: a.id })}
@@ -357,50 +372,123 @@ export default function BudgetsContent() {
       </Card>
 
       {/* Kartu mobile */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((b) => (
-          <Card key={b.id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between gap-3">
-                <span className="truncate">{b.categoryName}</span>
-                <span className="text-xs rounded px-2 py-0.5 bg-muted capitalize">
-                  {b.period}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span>
-                  Limit: <strong>{rupiah(b.limit)}</strong>
-                </span>
-                <span>
-                  Spent:{" "}
-                  <strong className={b.spent > b.limit ? "text-red-600" : ""}>
-                    {rupiah(b.spent)}
-                  </strong>
-                </span>
+      <div className="md:hidden space-y-2 bg-card rounded-lg shadow-lg p-2.5 border border-card-foreground/10">
+        <div className="flex flex-col gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-card-foreground">
+              Ringkasan Budget
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Lihat alokasi dan realisasi budget per kategori.
+            </p>
+          </div>
+          <div className="flex gap-2.5 flex-wrap text-muted-foreground text-xs">
+            <div className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+              Sudah terpakai {((total.spent / total.effectiveLimit) * 100).toFixed(2)}%
+            </div>
+            <div className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
+              {total.almostOver} kategori mendekati limit
+            </div>
+            <div className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+              {total.overBudget} kategori over budget
+            </div>
+          </div>
+        </div>
+        {items.length === 0 && (
+          <div className="flex justify-center items-center px-4 py-10 text-sm">
+            <div className="text-center space-y-3">
+              <p className="font-medium">
+                Belum ada budget untuk periode ini
+              </p>
+              <p className="text-muted-foreground">
+                Tambahkan budget untuk mulai mengelola pengeluaran Anda per kategori.
+              </p>
+            </div>
+          </div>
+        )}
+        {items.map((a, idx) => (
+          <Card key={a.id} className="bg-secondary p-2">
+            <CardContent className="p-2 gap-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {String(idx + 1).padStart(2, '0')}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground mb-1">
+                      {a.categoryName}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Terpakai: <strong>{rupiah(a.spent)}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-foreground mb-1">
+                      {rupiah(a.effectiveLimit)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Sisa: <strong>{rupiah(a.remaining)}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <Progress value={Math.round(b.progress * 100)} className="h-2" />
-              <div className="mt-2 text-sm text-muted-foreground">
-                Sisa: <strong>{rupiah(b.remaining)}</strong>
+              <div className="mt-2 flex flex-col gap-1">
+                <div className="text-xs text-muted-foreground flex justify-between">
+                  <p>Terpakai {Math.round(a.progress * 100)}%</p>
+                  <p>Sisa {Math.round((1 - a.progress) * 100)}%</p>
+                </div>
+                <Progress value={Math.round(a.progress * 100)} className="h-2" />
               </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <EditBudgetModal
-                  id={b.id}
-                  initial={{ limitAmount: b.limit, carryover: false }}
-                >
-                  <Button variant="outline" size="icon" aria-label="Edit">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </EditBudgetModal>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  aria-label="Hapus"
-                  onClick={() => del.mutate({ id: b.id })}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <Separator className="my-2" />
+              <div className="flex justify-between items-center">
+                <div className="text-xs text-muted-foreground">
+                  Periode: <strong>{a.period}</strong>
+                </div>
+                <div className="flex gap-2">
+                  <BudgetModal
+                    asChild
+                    type="edit"
+                    id={a.id}
+                    startDate={startDate}
+                    initial={{
+                      period: period,
+                      categoryId: a.categoryId,
+                      limitAmount: a.limitAmount,
+                      carryover: a.carryover,
+                      accumulatedCarryover: a.accumulatedCarryover
+                    }}
+                  >
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-full"
+                      aria-label="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </BudgetModal>
+                  <ConfirmationModal
+                    title="Hapus Akun"
+                    description={`Apakah Anda yakin ingin menghapus akun "${a.categoryName}"? Tindakan ini tidak dapat dibatalkan.`}
+                    confirmText="Hapus"
+                    cancelText="Batal"
+                    onConfirm={() => del.mutate({ id: a.id })}
+                    trigger={
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-full text-white"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

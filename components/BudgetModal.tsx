@@ -77,6 +77,7 @@ export default function BudgetModal({
   children,
   type,
   startDate = 1,
+  id = "",
   initial = {
     period: currentPeriod(startDate),
     categoryId: "",
@@ -89,6 +90,7 @@ export default function BudgetModal({
   children?: React.ReactNode;
   type?: "add" | "edit";
   startDate?: number;
+  id?: string;
   initial?: {
     period: string;
     categoryId: string;
@@ -142,6 +144,20 @@ export default function BudgetModal({
     },
   });
 
+  const patch = useApiMutation<{ ok: true }, {
+    limitAmount: number;
+    carryover: boolean;
+    accumulatedCarryover?: number;
+  }>(
+    (payload) => api.patch(`/api/budgets/${id}`, payload), {
+      onSuccess: () => {
+        toast.success("Budget diperbarui");
+        queryClient.invalidateQueries({ queryKey: ["budgets"] });
+        setOpen(false);
+      }
+    }
+  );
+
   return (
     <Dialog
       open={open}
@@ -160,6 +176,7 @@ export default function BudgetModal({
           </DialogDescription>
         </DialogHeader>
         <form
+          className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (!form.categoryId || !form.limitAmount)
@@ -172,9 +189,14 @@ export default function BudgetModal({
                 limitAmount: Number(form.limitAmount),
                 carryover: form.carryover,
               });
+            } else {
+              patch.mutate({
+                limitAmount: Number(form.limitAmount),
+                carryover: form.carryover,
+                accumulatedCarryover: form.carryover ? form.accumulatedCarryover : 0,
+              });
             }
           }}
-          className="grid gap-3"
         >
           <div className="w-full space-y-1">
             <label className="text-sm font-medium text-muted-foreground">
@@ -183,6 +205,7 @@ export default function BudgetModal({
             <Input
               type="month"
               value={form.period}
+              disabled={type === "edit"}
               onChange={e => setForm(
                 (f) => ({ ...f, period: e.target.value })
               )}
@@ -195,6 +218,7 @@ export default function BudgetModal({
               </label>
               <Select
                 value={form.categoryId}
+                disabled={type === "edit"}
                 onValueChange={(v) => setForm(
                   (f) => ({ ...f, categoryId: v })
                 )}
