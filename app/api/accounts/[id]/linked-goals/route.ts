@@ -24,7 +24,6 @@ export const GET = handleApi(async (req: Request) => {
       id: true,
       name: true,
       color: true,
-      icon: true,
     }
   });
 
