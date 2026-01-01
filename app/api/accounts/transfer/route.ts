@@ -102,7 +102,7 @@ export const POST = handleApi(async (req: Request) => {
               userId,
               transactionId: null,
               amount: String(contrib.amount),
-              occurredAt: at,
+              occurredAt: at.toISOString().split('T')[0],
               note: p.note ?? `Transfer ke ${toAcc.name}`,
             });
           }
@@ -116,7 +116,7 @@ export const POST = handleApi(async (req: Request) => {
             userId,
             transactionId: null,
             amount: String(splitAmount),
-            occurredAt: at,
+            occurredAt: at.toISOString().split('T')[0],
             note: p.note ?? `Auto (bagi rata) dari transfer ke ${toAcc.name}`,
           });
         }
