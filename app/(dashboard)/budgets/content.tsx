@@ -120,7 +120,7 @@ export default function BudgetsContent() {
   }, [startDate]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1 text-sm text-muted-foreground">
@@ -496,7 +496,7 @@ export default function BudgetsContent() {
       </div>
       
       {/* FAB tambah akun (mobile) */}
-      <div className="md:hidden fixed bottom-16 right-4 z-40 shadow-lg">
+      <div className="md:hidden fixed bottom-16 right-4 z-40">
         <BudgetModal asChild type="add">
           <Button
             className="h-12 w-12 rounded-full shadow-lg"

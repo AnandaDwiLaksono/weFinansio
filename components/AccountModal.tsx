@@ -142,7 +142,7 @@ export default function AccountModal({
               });
             }
           }}
-          className="grid gap-2"
+          className="grid gap-3"
         >
           <div className="w-full space-y-1">
             <label className="text-xs font-medium text-muted-foreground">

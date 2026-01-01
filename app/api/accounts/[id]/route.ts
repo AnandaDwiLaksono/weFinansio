@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db";
 import { accounts, transactions, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
@@ -24,6 +25,7 @@ export const PATCH = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -57,6 +59,7 @@ export const DELETE = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -78,5 +81,6 @@ export const DELETE = handleApi(async (req: Request) => {
   if (trx) throw new BadRequestError("Akun memiliki transaksi. Pindahkan/hapus transaksi terlebih dahulu.");
 
   await db.delete(accounts).where(eq(accounts.id, id));
+  
   return { ok: true };
 });

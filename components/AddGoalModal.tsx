@@ -51,7 +51,7 @@ export default function AddGoalModal({ onSaved, className }:{ onSaved?: ()=>void
           <Select value={form.linkedAccountId} onValueChange={(v)=> setForm(f=>({...f, linkedAccountId:v}))}>
             <SelectTrigger><SelectValue placeholder="Link ke akun tabungan (opsional)" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tidak ada</SelectItem>
+              <SelectItem value="nothing">Tidak ada</SelectItem>
               {(accs?.items ?? []).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
             </SelectContent>
           </Select>

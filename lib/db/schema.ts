@@ -317,9 +317,8 @@ export const goals = pgTable("goals", {
   linkedAccountId: uuid("linked_account_id")
     .references(() => accounts.id, { onDelete: "set null" }),
   note: text("note"),
-  color: varchar("color", { length: 7 }),
-  icon: varchar("icon", { length: 40 }),
   archived: boolean("archived").notNull().default(false),
+  color: varchar("color", { length: 16 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -343,9 +342,7 @@ export const goalContributions = pgTable("goal_contributions", {
   transactionId: uuid("transaction_id")
     .references(() => transactions.id, { onDelete: "set null" }),
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-  occurredAt: timestamp("occurred_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+  occurredAt: date("occurred_at").defaultNow().notNull(),
   note: text("note"),
 }, (t) => [
   index("goal_contrib_goal_date_idx").on(t.goalId, t.occurredAt),

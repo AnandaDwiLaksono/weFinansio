@@ -76,7 +76,7 @@ export default function AccountsContent() {
     { placeholderData: keepPreviousData }
   );
 
-  const delMut = useApiMutation<{ok:true}, {id:string}>(
+  const delMut = useApiMutation<{ ok: true }, { id: string }>(
     ({ id }) => api.del(`/api/accounts/${id}`),
     { 
       onSuccess: () => {
@@ -594,7 +594,7 @@ export default function AccountsContent() {
       </Card>
 
       {/* FAB tambah akun (mobile) */}
-      <div className="md:hidden fixed bottom-16 right-4 z-40 shadow-lg">
+      <div className="md:hidden fixed bottom-16 right-4 z-40">
         <AccountModal asChild type="add">
           <Button
             className="h-12 w-12 rounded-full shadow-lg"
