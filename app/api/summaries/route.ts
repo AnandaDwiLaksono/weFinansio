@@ -8,8 +8,8 @@ import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 
 function monthRange(d = new Date()) {
-  const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0);
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split("T")[0];
   return { start, end };
 }
 

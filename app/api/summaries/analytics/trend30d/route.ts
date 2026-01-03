@@ -35,7 +35,11 @@ export const GET = handleApi(async () => {
       expense: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} END), 0)::text`,
     })
     .from(transactions)
-    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lt(transactions.occurredAt, new Date(end.getTime() + 86400000))))
+    .where(and(
+      eq(transactions.userId, userId),
+      gte(transactions.occurredAt, start.toISOString().split("T")[0]),
+      lt(transactions.occurredAt, new Date(end.getTime() + 86400000).toISOString().split("T")[0])
+    ))
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 

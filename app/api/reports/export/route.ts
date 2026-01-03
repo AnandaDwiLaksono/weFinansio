@@ -19,8 +19,8 @@ export const GET = handleApi(async (req: Request) => {
   if (!userId) throw new UnauthorizedError();
 
   const p = Q.parse(Object.fromEntries(new URL(req.url).searchParams));
-  const from = new Date(p.fromDate + "T00:00:00Z");
-  const to = new Date(p.toDate + "T23:59:59Z");
+  const from = new Date(p.fromDate).toISOString().split("T")[0];
+  const to = new Date(p.toDate).toISOString().split("T")[0];
 
   const rows = await db
     .select({
@@ -50,7 +50,7 @@ export const GET = handleApi(async (req: Request) => {
   const lines = [header.join(",")];
   for (const r of rows) {
     const line = [
-      r.date.toISOString(),
+      r.date,
       r.type,
       r.amount,
       (r.accountName ?? "").replace(/,/g, " "),

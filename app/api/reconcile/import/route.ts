@@ -52,8 +52,8 @@ export const POST = handleApi(async (req: Request) => {
         eq(transactions.userId, userId),
         eq(transactions.accountId, r.accountId),
         eq(transactions.type, type as "income" | "expense"),
-        gte(transactions.occurredAt, d0),
-        lte(transactions.occurredAt, d1),
+        gte(transactions.occurredAt, d0.toISOString().split("T")[0]),
+        lte(transactions.occurredAt, d1.toISOString().split("T")[0]),
         eq(transactions.cleared, false)
       ))
       .orderBy(desc(transactions.occurredAt))

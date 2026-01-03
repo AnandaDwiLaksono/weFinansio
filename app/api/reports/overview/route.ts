@@ -15,8 +15,8 @@ const Q = z.object({
 
 function monthRange(period: string) {
   const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, 1, 0, 0, 0, 0);
-  const end = new Date(y, m, 0, 23, 59, 59, 999);
+  const start = new Date(y, m - 1, 1).toISOString().split("T")[0];
+  const end = new Date(y, m, 0).toISOString().split("T")[0];
   return { start, end };
 }
 

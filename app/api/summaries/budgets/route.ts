@@ -9,8 +9,8 @@ import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 
 function monthRange(d = new Date()) {
-  const s = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0);
-  const e = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0);
+  const s = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
+  const e = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split("T")[0];
   return { s, e };
 }
 
@@ -52,7 +52,7 @@ export const GET = handleApi(async () => {
     })
     .from(budgets)
     .leftJoin(categories, eq(categories.id, budgets.categoryId))
-    .where(and(eq(budgets.userId, userId), eq(budgets.periodMonth, s.toISOString().slice(0, 10))));
+    .where(and(eq(budgets.userId, userId), eq(budgets.periodMonth, s)));
 
   const data = rows.map(r => {
     const planned = Number(r.amount ?? 0);
