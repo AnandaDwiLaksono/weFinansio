@@ -190,6 +190,13 @@
       "when": 1767243564237,
       "tag": "0026_ordinary_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1767352510319,
+      "tag": "0027_previous_namora",
+      "breakpoints": true
     }
   ]
 }

@@ -48,7 +48,7 @@ export const POST = handleApi(async (req: Request) => {
   if (!fromAcc || !toAcc) throw new BadRequestError("Akun tidak valid.");
 
   const gid = randomUUID(); // transfer_group
-  const at = new Date(p.occurredAt);
+  const at = new Date(p.occurredAt).toISOString().split('T')[0];
   const amountStr = String(p.amount);
 
   let linkedGoalsCount = 0;
@@ -102,7 +102,7 @@ export const POST = handleApi(async (req: Request) => {
               userId,
               transactionId: null,
               amount: String(contrib.amount),
-              occurredAt: at.toISOString().split('T')[0],
+              occurredAt: at,
               note: p.note ?? `Transfer ke ${toAcc.name}`,
             });
           }
@@ -116,7 +116,7 @@ export const POST = handleApi(async (req: Request) => {
             userId,
             transactionId: null,
             amount: String(splitAmount),
-            occurredAt: at.toISOString().split('T')[0],
+            occurredAt: at,
             note: p.note ?? `Auto (bagi rata) dari transfer ke ${toAcc.name}`,
           });
         }

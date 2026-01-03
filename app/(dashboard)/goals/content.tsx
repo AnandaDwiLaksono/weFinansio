@@ -129,10 +129,9 @@ export default function GoalsContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Goals</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold">
             Pantau progres tujuan finansialmu
-          </p>
+          </h1>
         </div>
         <div className="hidden md:block">
           <GoalModal type="add" asChild>

@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import BudgetModal from "@/components/BudgetModal";
-import EditBudgetModal from "@/components/EditBudgetModal";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,

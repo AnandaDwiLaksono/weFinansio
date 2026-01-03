@@ -259,7 +259,7 @@ export default function GoalContributionModal({
               </div>
             </div>
             <div className="w-full space-y-1">
-              <label className="text-xs font-medium">Tanggal</label>
+              <label className="text-xs font-medium text-muted-foreground">Tanggal</label>
               <Input
                 type="date"
                 value={form.occurredAt}
@@ -270,7 +270,7 @@ export default function GoalContributionModal({
             </div>
           </div>
           <div className="w-full space-y-1">
-            <label className="text-xs font-medium">Catatan</label>
+            <label className="text-xs font-medium text-muted-foreground">Catatan</label>
             <Input
               placeholder="Catatan kontribusi (opsional)"
               value={form.note}

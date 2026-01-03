@@ -49,7 +49,7 @@ export async function createTransaction(formData: FormData) {
 
   await db.insert(transactions).values({
     userId,
-    occurredAt: new Date(p.data.occurredAt),
+    occurredAt: new Date(p.data.occurredAt).toISOString().split("T")[0],
     amount: p.data.amount, // string numeric
     type: p.data.type,
     accountId: p.data.accountId,

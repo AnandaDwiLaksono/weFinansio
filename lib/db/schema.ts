@@ -154,7 +154,7 @@ export const transactions = pgTable("transactions", {
   }),
   type: txType("type").notNull(), // expense/income/transfer
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(), // selalu positif
-  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  occurredAt: date("occurred_at").defaultNow().notNull(),
   note: text("note"),
   status: txStatus("status").notNull().default("cleared"),
   transferToAccountId: uuid("transfer_to_account_id").references(

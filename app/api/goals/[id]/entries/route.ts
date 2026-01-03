@@ -4,7 +4,7 @@ import { and, eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { goals, goalContributions, users, accounts, categories, transactions } from "@/lib/db/schema";
+import { goals, goalContributions, users, accounts, transactions } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "@/lib/errors";
@@ -16,6 +16,7 @@ const CreateBody = z.object({
   note: z.string().max(200).optional(),
   accountId: z.uuid(), // account untuk transfer (source atau destination tergantung type)
   targetAccountId: z.uuid(), // optional override untuk target account
+  transactionId: z.uuid().optional(), // if provided, link to existing transaction
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -85,7 +86,7 @@ export const POST = handleApi(async (req: Request) => {
   const b = CreateBody.parse(await req.json());
   const occurredAt = b.occurredAt || new Date().toISOString().split('T')[0];
 
-  // Validasi kepemilikan account
+  // Jika tidak ada transactionId, lanjut dengan flow normal (buat transaction baru)
   const userAcc = await db.query.accounts.findFirst({
     where: and(eq(accounts.id, b.accountId), eq(accounts.userId, userId)),
     columns: { id: true }
@@ -129,10 +130,10 @@ export const POST = handleApi(async (req: Request) => {
     }
 
     // Insert transaction sebagai TRANSFER jika account berbeda
-    if (txAccountId !== txTransferToAccountId) {
+    if (txAccountId !== txTransferToAccountId && !b.transactionId) {
       const [txn] = await tx.insert(transactions).values({
         userId,
-        occurredAt: new Date(occurredAt),
+        occurredAt: occurredAt,
         amount: String(b.amount),
         type: "transfer",
         accountId: txAccountId,
@@ -141,6 +142,14 @@ export const POST = handleApi(async (req: Request) => {
       }).returning({ id: transactions.id });
 
       transactionId = txn.id;
+    } else if (b.transactionId) {
+      const existingTxn = await db.query.transactions.findFirst({
+        where: and(eq(transactions.id, b.transactionId), eq(transactions.userId, userId)),
+        columns: { id: true }
+      });
+      if (!existingTxn) throw new BadRequestError("Transaksi tidak ditemukan atau tidak valid.");
+
+      transactionId = existingTxn.id;
     } else {
       transactionId = undefined;
     }
