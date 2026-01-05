@@ -44,14 +44,20 @@ export const PATCH = handleApi(async (req: Request) => {
   if (!own) throw new NotFoundError("Goal tidak ditemukan.");
 
   const b = UpdateBody.parse(await req.json());
+  
+  // Handle string "null" being sent as linkedAccountId
+  const linkedAccountId = b.linkedAccountId === "null" || !b.linkedAccountId ? null : b.linkedAccountId;
+  // Handle empty note being sent as empty string
+  const note = b.note === "" || !b.note ? null : b.note;
+  
   await db.update(goals).set({
     name: b.name,
-    targetAmount: typeof b.targetAmount === "number" ? String(b.targetAmount) : undefined,
-    targetDate: b.targetDate === undefined ? undefined : (b.targetDate ?? null),
-    startAmount: typeof b.startAmount === "number" ? String(b.startAmount) : undefined,
-    linkedAccountId: b.linkedAccountId === undefined ? undefined : (b.linkedAccountId ?? null),
+    targetAmount: String(b.targetAmount),
+    targetDate: b.targetDate ?? null,
+    startAmount: String(b.startAmount),
+    linkedAccountId: linkedAccountId,
     archived: b.archived,
-    note: typeof b.note === "undefined" ? undefined : (b.note ?? null),
+    note: note,
     color: b.color,
   }).where(eq(goals.id, id));
 
