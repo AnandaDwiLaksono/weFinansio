@@ -76,7 +76,17 @@ export const GET = handleApi(async (req: Request) => {
     .from(accounts)
     .where(and(...where));
 
-  return { items, page: p.page, limit: p.limit, total };
+  const totals = await db
+    .select({
+      id: accounts.id,
+      name: accounts.name,
+      type: accounts.type,
+      balance: accounts.balance,
+    })
+    .from(accounts)
+    .where(and(...where, eq(accounts.archived, p.archived === "true" ? true : false)))
+
+  return { items, page: p.page, limit: p.limit, total, totals };
 });
 
 export const POST = handleApi(async (req: Request) => {

@@ -8,11 +8,10 @@ import { budgets, categories, transactions, users, userSettings } from "@/lib/db
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";
-import { effect } from "zod/v3";
 
 const ListQuery = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
-  q: z.string().optional(),
+  search: z.string().optional(),
   page: z.string().optional(),
   limit: z.string().optional(),
 });
@@ -33,6 +32,7 @@ export const GET = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -52,10 +52,11 @@ export const GET = handleApi(async (req: Request) => {
   const { start: prevStart, end: prevEnd } = periodRange(prev, startDatePeriod);
   const { start, end } = periodRange(p.period, startDatePeriod);
 
+  // build where clause
   const whereConditions = [
     eq(budgets.userId, userId),
     eq(budgets.periodMonth, p.period),
-    p.q ? ilike(categories.name, `%${p.q}%`) : undefined,
+    p.search ? ilike(categories.name, `%${p.search}%`) : undefined,
   ].filter(Boolean);
   const where = whereConditions as NonNullable<typeof whereConditions[number]>[];
 
@@ -111,7 +112,7 @@ export const GET = handleApi(async (req: Request) => {
     .groupBy(transactions.categoryId);
 
   const spentMap = new Map<string, number>();
-  for (const r of spentRows) spentMap.set(r.categoryId ?? "null", Number(r.spent||0));
+  for (const r of spentRows) spentMap.set(r.categoryId ?? "null", Number(r.spent || 0));
 
   // preload all previous budgets to avoid query per item
   const prevBudgets = await db.query.budgets.findMany({
@@ -128,7 +129,7 @@ export const GET = handleApi(async (req: Request) => {
   }
 
   const items = rows.map(r => {
-    const limit = Number(r.limitAmount||0);
+    const limit = Number(r.limitAmount || 0);
     const accumulated = Number(r.accumulatedCarryover || 0);
     const spent = spentMap.get(r.categoryId ?? "null") || 0;
 
@@ -147,17 +148,40 @@ export const GET = handleApi(async (req: Request) => {
     };
   });
 
-  // ringkasan total
-  const totalLimit = items.reduce((s, i)=> s + i.limit, 0);
-  const totalEffectiveLimit = items.reduce((s, i)=> s + i.effectiveLimit, 0);
-  const totalSpent = items.reduce((s, i)=> s + i.spent, 0);
-  const totalAlmostOver = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.progress >= 0.8 ? 1 : 0), 0);
-  const totalOverBudget = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.spent > i.effectiveLimit ? 1 : 0), 0);
+  const totalItems = await db
+    .select({ count: sql<number>`COUNT(*)::int` })
+    .from(budgets)
+    .where(and(...where));
+  
+  const totalRows = await db
+    .select({
+      id: budgets.id,
+      limitAmount: sql<string>`${budgets.amount}::text`,
+      accumulatedCarryover: sql<string>`${budgets.accumulatedCarryover}::text`,
+      categoryId: categories.id,
+    })
+    .from(budgets)
+    .leftJoin(categories, eq(categories.id, budgets.categoryId))
+    .where(and(...where))
+    .orderBy(categories.name);
 
+  // ringkasan total
+  // const totalLimit = items.reduce((s, i)=> s + i.limit, 0);
+  // const totalEffectiveLimit = items.reduce((s, i)=> s + i.effectiveLimit, 0);
+  // const totalSpent = items.reduce((s, i)=> s + i.spent, 0);
+  // const totalAlmostOver = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.progress >= 0.8 ? 1 : 0), 0);
+  // const totalOverBudget = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.spent > i.effectiveLimit ? 1 : 0), 0);
+
+  const totalLimit = totalRows.reduce((s, i)=> s + Number(i.limitAmount || 0), 0);
+  const totalEffectiveLimit = totalRows.reduce((s, i)=> s + Number(i.limitAmount || 0) + Number(i.accumulatedCarryover || 0), 0);
+  const totalSpent = totalRows.reduce((s, i)=> s + (spentMap.get(i.categoryId ?? "null") || 0), 0);
+  const totalAlmostOver = totalRows.reduce((s, i) => s + ((Number(i.limitAmount || 0) + Number(i.accumulatedCarryover || 0)) > 0 && (spentMap.get(i.categoryId ?? "null") || 0) / (Number(i.limitAmount || 0) + Number(i.accumulatedCarryover || 0)) >= 0.8 ? 1 : 0), 0);
+  const totalOverBudget = totalRows.reduce((s, i) => s + ((Number(i.limitAmount || 0) + Number(i.accumulatedCarryover || 0)) > 0 && (spentMap.get(i.categoryId ?? "null") || 0) > (Number(i.limitAmount || 0) + Number(i.accumulatedCarryover || 0)) ? 1 : 0), 0);
   return {
     period: p.period,
     items,
     total: {
+      total: totalItems[0]?.count || 0,
       limit: totalLimit,
       effectiveLimit: totalEffectiveLimit,
       spent: totalSpent,
@@ -274,8 +298,6 @@ function prevPeriod(p: string) {
 
 function periodRange(period: string, startDate: number = 1) {
   const [y, m] = period.split("-").map(Number);
-  // const start = new Date(y, m - 1, startDate, 0, 0, 0, 0);
-  // const end   = new Date(y, m, startDate - 1, 23, 59, 59, 999); // last day of month
   const start = new Date(y, m - 1, startDate).toISOString().split('T')[0];
   const end = new Date(y, m, startDate - 1).toISOString().split('T')[0];
 

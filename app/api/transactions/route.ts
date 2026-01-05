@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -118,13 +118,26 @@ export const POST = handleApi(async (req: Request) => {
 
   const body = await parseJson(req, CreateBody);
 
-  // validasi kepemilikan account/category
+  // validasi kepemilikan account & category
   const [acc] = await db
     .select({ id: accounts.id })
     .from(accounts)
     .where(and(eq(accounts.id, body.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!acc) throw new BadRequestError("Akun tidak valid.");
+
+  if (body.type === "transfer") {
+    if (!body.transferToAccountId) {
+      throw new BadRequestError("Akun tujuan transfer harus diisi.");
+    }
+
+    const [toAcc] = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.id, body.transferToAccountId), eq(accounts.userId, userId)))
+      .limit(1);
+    if (!toAcc) throw new BadRequestError("Akun tujuan transfer tidak valid.");
+  }
 
   if (body.categoryId) {
     const [cat] = await db
@@ -135,6 +148,7 @@ export const POST = handleApi(async (req: Request) => {
     if (!cat) throw new BadRequestError("Kategori tidak valid.");
   }
 
+  // insert transaksi
   const [row] = await db.insert(transactions).values({
     userId,
     occurredAt: body.occurredAt,
@@ -145,6 +159,40 @@ export const POST = handleApi(async (req: Request) => {
     note: body.notes ?? null,
     transferToAccountId: body.transferToAccountId ?? null,
   }).returning({ id: transactions.id });
+
+  // update account balance
+  if (body.type === "transfer") {
+    // transfer
+    await db
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} - ${body.amount}`,
+      })
+      .where(eq(accounts.id, body.accountId));
+
+    await db
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} + ${body.amount}`,
+      })
+      .where(eq(accounts.id, body.transferToAccountId!));
+  } else if (body.type === "income") {
+    // income
+    await db
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} + ${body.amount}`,
+      })
+      .where(eq(accounts.id, body.accountId));
+  } else if (body.type === "expense") {
+    // expense
+    await db
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} - ${body.amount}`,
+      })
+      .where(eq(accounts.id, body.accountId));
+  }
 
   return { id: row?.id };
 });

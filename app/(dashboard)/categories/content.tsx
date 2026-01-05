@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useApiMutation, useApiQuery, api } from "@/lib/react-query";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2, Plus, Search, Wallet, Utensils, ShoppingCart, Home, Car, Coffee, Heart, Gift, DollarSign, TrendingUp, Briefcase } from "lucide-react";
+import { Pencil, Trash2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -32,21 +32,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import CategoryModal from "@/components/CategoryModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
-
-// Icon mapper
-const iconMap: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
-  Wallet,
-  Utensils,
-  ShoppingCart,
-  Home,
-  Car,
-  Coffee,
-  Heart,
-  Gift,
-  DollarSign,
-  TrendingUp,
-  Briefcase,
-};
+import { getIconByName } from "@/lib/icons";
 
 type Row = {
   id: string;
@@ -58,11 +44,16 @@ type Row = {
   note: string;
   createdAt: string
 };
+type Totals = {
+  id: string;
+  kind: "income" | "expense";
+};
 type ListRes = {
   items: Row[];
   page: number;
   limit: number;
-  total: number
+  total: number;
+  totals: Totals[];
 };
 
 export default function CategoriesContent() {
@@ -100,7 +91,8 @@ export default function CategoriesContent() {
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / limit));
-  const activedCategories = useMemo(() => items.filter(c => !c.archived).length, [items]);
+  // const activedCategories = useMemo(() => items.filter(c => !c.archived).length, [items]);
+  const activedCategories = useMemo(() => Number(data?.totals?.length || 0), [data?.totals]);
 
   return (
     <div className="space-y-4">
@@ -224,7 +216,7 @@ export default function CategoriesContent() {
               </p>
             </div>
             <div className="px-2 py-0.5 rounded-full bg-accent text-xs text-muted-foreground">
-              {activedCategories} kategori aktif
+              {activedCategories} kategori {archived === "true" ? "diarsipkan" : "aktif"}
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -246,7 +238,7 @@ export default function CategoriesContent() {
                 {items.map((c, index) => (
                   <TableRow key={c.id}>
                     <TableCell className="text-xs text-muted-foreground font-mono">
-                      {String(index + 1).padStart(2, '0')}
+                      {String((page - 1) * limit + index + 1).padStart(2, '0')}
                     </TableCell>
                     <TableCell className="font-medium">
                       {c.name}
@@ -263,8 +255,8 @@ export default function CategoriesContent() {
                     </TableCell>
                     <TableCell>
                       {(() => {
-                        const IconComponent = getIconComponent(c.icon);
-                        return <IconComponent className="h-5 w-5 m-auto" />;
+                        const IconComponent = getIconByName(c.icon);
+                        return IconComponent ? <IconComponent className="h-5 w-5 m-auto" /> : null;
                       })()}
                     </TableCell>
                     <TableCell>
@@ -369,12 +361,11 @@ export default function CategoriesContent() {
           </CardHeader>
           <CardContent className="space-y-2.5">
             {(() => {
-              const byType = items
-                .filter(c => !c.archived)
-                .reduce((acc, curr) => {
-                  acc[curr.kind] = (acc[curr.kind] || 0) + 1;
-                  return acc;
-                }, {} as Record<string, number>);
+              const byType = (data?.totals ?? []).reduce((acc, curr) => {
+                acc[curr.kind] = (acc[curr.kind] || 0) + 1;
+                
+                return acc;
+              }, {} as Record<string, number>);
               
               const types = [
                 { key: "income", label: "Pemasukan" },
@@ -447,14 +438,14 @@ export default function CategoriesContent() {
           </div>
         )}
         {items.map((c, idx) => {
-          const IconComponent = getIconComponent(c.icon);
+          const IconComponent = getIconByName(c.icon);
           return (
             <Card key={c.id} className="bg-secondary p-2">
               <CardContent className="p-2 gap-1.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <div className="text-xs font-mono text-muted-foreground">
-                      {String(idx + 1).padStart(2, '0')}
+                      {String((page - 1) * limit + idx + 1).padStart(2, '0')}
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-foreground mb-1">
@@ -469,7 +460,7 @@ export default function CategoriesContent() {
                     <div className="text-right">
                       <div className="text-sm font-semibold text-foreground flex items-center justify-center gap-2 mb-1">
                         <div className="h-4 w-4 rounded-full" style={{ background: c.color }} />
-                        <IconComponent className="h-4 w-4" />
+                        {IconComponent && <IconComponent className="h-5 w-5" />}
                       </div>
                       <span className="inline-flex items-center gap-1.5 text-xs mt-1 bg-[#10b9811f] px-2 py-0.5 rounded-full text-[#047857] font-medium">
                         <span className={`h-2 w-2 rounded-full ${c.archived ? 'bg-red-500' : 'bg-green-500'}`}></span>
@@ -619,7 +610,3 @@ export default function CategoriesContent() {
     </div>
   );
 }
-
-const getIconComponent = (iconName: string) => {
-  return iconMap[iconName] || Wallet; // Default to Wallet if not found
-};

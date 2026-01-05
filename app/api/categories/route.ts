@@ -8,6 +8,7 @@ import { categories, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";
+import { arch } from "os";
 
 const ListQuery = z.object({
   search: z.string().optional(),
@@ -66,7 +67,7 @@ export const GET = handleApi(async (req: Request) => {
     })
     .from(categories)
     .where(and(...where))
-    .orderBy(categories.createdAt)
+    .orderBy(categories.name)
     .limit(p.limit)
     .offset(offset);
 
@@ -75,7 +76,15 @@ export const GET = handleApi(async (req: Request) => {
     .from(categories)
     .where(and(...where));
 
-  return { items, page: p.page, limit: p.limit, total };
+  const totals = await db
+    .select({
+      id: categories.id,
+      kind: categories.kind,
+    })
+    .from(categories)
+    .where(and(...where, eq(categories.archived, p.archived === "true" ? true : false)));
+
+  return { items, page: p.page, limit: p.limit, total, totals };
 });
 
 export const POST = handleApi(async (req: Request) => {

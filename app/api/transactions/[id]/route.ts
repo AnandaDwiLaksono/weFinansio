@@ -1,10 +1,10 @@
 export const runtime = "nodejs";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { transactions, users } from "@/lib/db/schema";
+import { accounts, transactions, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
@@ -32,19 +32,47 @@ export const PATCH = handleApi(async (req: Request) => {
 
   const id = req.url.split('/').pop()!;
 
+  // check transaksi exists
   const trx = await db.query.transactions.findFirst({
     where: and(eq(transactions.id, id), eq(transactions.userId, userId)),
-    columns: { id: true }
+    columns: { id: true, amount: true, accountId: true, type: true, transferToAccountId: true }
   });
   if (!trx) throw new NotFoundError("Transaksi tidak ditemukan.");
 
   const body = UpdateBody.parse(await req.json());
 
+  // update transaksi
   await db.update(transactions).set({
     occurredAt: body.occurredAt,
     amount: String(body.amount),
     note: body.notes,
   }).where(eq(transactions.id, id));
+
+  // update account balances if needed
+  if (trx.amount !== String(body.amount)) {
+    if (trx.type === "income") {
+      // adjust account balance
+      const diff = Number(body.amount) - Number(trx.amount);
+      await db.update(accounts).set({
+        balance: sql`${accounts.balance} + ${diff}`,
+      }).where(eq(accounts.id, trx.accountId));
+    } else if (trx.type === "expense") {
+      // adjust account balance
+      const diff = Number(trx.amount) - Number(body.amount);
+      await db.update(accounts).set({
+        balance: sql`${accounts.balance} + ${diff}`,
+      }).where(eq(accounts.id, trx.accountId));
+    } else if (trx.type === "transfer" && trx.transferToAccountId) {
+      // adjust both accounts
+      const diff = Number(body.amount) - Number(trx.amount);
+      await db.update(accounts).set({
+        balance: sql`${accounts.balance} + ${diff}`,
+      }).where(eq(accounts.id, trx.accountId));
+      await db.update(accounts).set({
+        balance: sql`${accounts.balance} - ${diff}`,
+      }).where(eq(accounts.id, trx.transferToAccountId));
+    }
+  }
 
   return { ok: true };
 });

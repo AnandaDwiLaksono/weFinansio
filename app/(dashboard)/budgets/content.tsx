@@ -45,6 +45,7 @@ type Res = {
   period: string;
   items: Item[];
   total: {
+    total: number;
     limit: number;
     effectiveLimit: number;
     spent: number;
@@ -68,20 +69,22 @@ export default function BudgetsContent() {
   const startDate = Number(user?.settings.startDatePeriod ?? 1);
 
   const [period, setPeriod] = useState(currentPeriod(startDate));
-  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const limit = 20;
+  const limit = 10;
 
   const { data } = useApiQuery<Res>(
-    ["budgets", { period, q, page, limit }],
+    ["budgets", { period, search, page, limit }],
     () => {
-      const params = new URLSearchParams({ period, q, page: String(page), limit: String(limit) });
+      const params = new URLSearchParams({ period, search, page: String(page), limit: String(limit) });
 
       return api.get("/api/budgets?" + params.toString());
     },
     { placeholderData: keepPreviousData }
   );
+
+  console.log({ data });
 
   const del = useApiMutation<{ ok: true }, { id: string }>(
     ({ id }) => api.del(`/api/budgets/${id}`),
@@ -104,6 +107,7 @@ export default function BudgetsContent() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? {
+    total: 0,
     limit: 0,
     effectiveLimit: 0,
     spent: 0,
@@ -114,7 +118,7 @@ export default function BudgetsContent() {
 
   useEffect(() => {
     setPeriod(currentPeriod(startDate));
-    setQ("");
+    setSearch("");
     setPage(1);
   }, [startDate]);
 
@@ -166,7 +170,7 @@ export default function BudgetsContent() {
               variant="outline"
               className="cursor-pointer"
               onClick={() => {
-                setQ("");
+                setSearch("");
                 setPeriod(currentPeriod(startDate));
               }}
             >
@@ -181,8 +185,8 @@ export default function BudgetsContent() {
               <div className="relative">
                 <Input
                   placeholder="Cari nama kategori..."
-                  value={q}
-                  onChange={(e) => { setQ(e.target.value); }}
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); }}
                   className="w-full pr-8"
                 />
                 <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -270,7 +274,7 @@ export default function BudgetsContent() {
                   {items.map((a, idx) => (
                     <TableRow key={a.id}>
                       <TableCell className="text-xs text-muted-foreground font-mono">
-                        {String(idx + 1).padStart(2, '0')}
+                        {String((page - 1) * limit + idx + 1).padStart(2, '0')}
                       </TableCell>
                       <TableCell className="font-medium capitalize">
                         {a.categoryName}
@@ -345,7 +349,7 @@ export default function BudgetsContent() {
               </Table>
               <div className="p-1.5 border-t flex items-center justify-between text-xs text-muted-foreground">
                 <div>
-                  Menampilkan {(page - 1) * limit + 1} - {Math.min(page * limit, items.length)} dari {items.length} budget</div>
+                  Menampilkan {(page - 1) * limit + 1} - {Math.min(page * limit, total.total)} dari {total.total} budget</div>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
@@ -358,7 +362,7 @@ export default function BudgetsContent() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    disabled={page >= Math.ceil(items.length / limit)}
+                    disabled={page >= Math.ceil(total.total / limit)}
                     onClick={() => setPage(p => p + 1)}
                   >
                     Berikutnya
@@ -522,7 +526,7 @@ function currentPeriod(startDate: number = 1) {
   if (d < startDate) {
     const prevMonth = m - 1 === 0 ? 12 : m - 1;
     const prevYear = prevMonth === 12 ? y - 1 : y;
-    console.log({ result: `${prevYear}-${String(prevMonth).padStart(2, "0")}` });
+    
     return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
   } else {
     return `${y}-${String(m).padStart(2, "0")}`;

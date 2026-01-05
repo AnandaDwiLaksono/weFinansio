@@ -44,11 +44,18 @@ type Row = {
   note: string;
   updatedAt: string;
 };
+type Totals = {
+  id: string;
+  name: string;
+  type: "cash" | "bank" | "ewallet" | "investment";
+  balance: string;
+};
 type ListRes = {
   items: Row[];
   page: number;
   limit: number;
-  total: number
+  total: number;
+  totals?: Totals[];
 };
 
 export default function AccountsContent() {
@@ -89,10 +96,8 @@ export default function AccountsContent() {
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / limit));
-  const totalSaldo = useMemo(() => items.filter(a => !a.archived).reduce(
-    (s, a) => s + Number(a.balance || 0), 0
-  ), [items]);
-  const activedAccounts = useMemo(() => items.filter(a => !a.archived).length, [items]);
+  const totalSaldo = useMemo(() => data?.totals?.reduce((a, c) => a + Number(c.balance || 0), 0) ?? 0, [data?.totals]);
+  const activedAccounts = useMemo(() => Number(data?.totals?.length || 0), [data?.totals]);
 
   return (
     <div className="space-y-4">
@@ -226,7 +231,7 @@ export default function AccountsContent() {
               <p className="text-xs text-muted-foreground">Kelola semua dompet, rekening bank, e-wallet, dan investasi.</p>
             </div>
             <div className="px-2 py-0.5 rounded-full bg-accent text-xs text-muted-foreground">
-              {activedAccounts} akun aktif
+              {activedAccounts} akun {archived === "true" ? "diarsipkan" : "aktif"}
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -357,19 +362,16 @@ export default function AccountsContent() {
           </CardHeader>
           <CardContent className="space-y-2.5">
             {(() => {
-              const byType = items
-                .filter(a => !a.archived)
-                .reduce((acc, a) => {
-                  acc[a.type] = (acc[a.type] || 0) + Number(a.balance || 0);
-
-                  return acc;
-                }, {} as Record<string, number>);
+              const byType = data?.totals?.reduce<Record<string, number>>((acc, curr) => {
+                acc[curr.type] = (acc[curr.type] || 0) + Number(curr.balance || 0);
+                return acc;
+              }, {}) || {};
               
               const types = [
-                { key: 'cash', label: 'Tunai', count: items.filter(a => a.type === 'cash').length },
-                { key: 'bank', label: 'Bank', count: items.filter(a => a.type === 'bank').length },
-                { key: 'ewallet', label: 'e-Wallet', count: items.filter(a => a.type === 'ewallet').length },
-                { key: 'investment', label: 'Investasi', count: items.filter(a => a.type === 'investment').length },
+                { key: 'cash', label: 'Tunai', count: data?.totals?.filter(a => a.type === 'cash').length },
+                { key: 'bank', label: 'Bank', count: data?.totals?.filter(a => a.type === 'bank').length },
+                { key: 'ewallet', label: 'e-Wallet', count: data?.totals?.filter(a => a.type === 'ewallet').length },
+                { key: 'investment', label: 'Investasi', count: data?.totals?.filter(a => a.type === 'investment').length },
               ];
 
               return types.map(({ key, label, count }) => {
@@ -381,9 +383,9 @@ export default function AccountsContent() {
                     <div className="flex items-center justify-between flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
                         <div className={`h-2 w-2 rounded-full ${
-                          key === 'cash' ? 'bg-blue-500' : 
-                          key === 'bank' ? 'bg-blue-600' : 
-                          key === 'ewallet' ? 'bg-blue-400' : 'bg-gray-400'
+                          key === 'cash' ? 'bg-blue-300' : 
+                          key === 'bank' ? 'bg-blue-700' : 
+                          key === 'ewallet' ? 'bg-blue-500' : 'bg-gray-400'
                         }`}></div>
                         <span className="text-sm font-medium">{label}</span>
                         <span className="text-xs text-muted-foreground"> · {count} akun</span>
@@ -428,7 +430,7 @@ export default function AccountsContent() {
             </p>
           </div>
           <div className="px-1.5 py-0.5 rounded-full bg-accent text-xs text-muted-foreground w-1/4">
-            {activedAccounts} akun aktif
+            {activedAccounts} akun {archived === "true" ? "diarsipkan" : "aktif"}
           </div>
         </div>
         {items.length === 0 && (
@@ -544,18 +546,16 @@ export default function AccountsContent() {
         </CardHeader>
         <CardContent className="space-y-3">
           {(() => {
-            const byType = items
-              .filter(a => !a.archived)
-              .reduce((acc, a) => {
-                acc[a.type] = (acc[a.type] || 0) + Number(a.balance || 0);
-                return acc;
-              }, {} as Record<string, number>);
+            const byType = data?.totals?.reduce<Record<string, number>>((acc, curr) => {
+              acc[curr.type] = (acc[curr.type] || 0) + Number(curr.balance || 0);
+              return acc;
+            }, {}) || {};
             
             const types = [
-              { key: 'cash', label: 'Tunai', count: items.filter(a => a.type === 'cash').length },
-              { key: 'bank', label: 'Bank', count: items.filter(a => a.type === 'bank').length },
-              { key: 'ewallet', label: 'e-Wallet', count: items.filter(a => a.type === 'ewallet').length },
-              { key: 'investment', label: 'Investasi', count: items.filter(a => a.type === 'investment').length },
+              { key: 'cash', label: 'Tunai', count: data?.totals?.filter(a => a.type === 'cash').length },
+              { key: 'bank', label: 'Bank', count: data?.totals?.filter(a => a.type === 'bank').length },
+              { key: 'ewallet', label: 'e-Wallet', count: data?.totals?.filter(a => a.type === 'ewallet').length },
+              { key: 'investment', label: 'Investasi', count: data?.totals?.filter(a => a.type === 'investment').length },
             ];
 
             return types.map(({ key, label, count }) => {
