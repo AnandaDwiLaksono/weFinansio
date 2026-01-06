@@ -82,6 +82,7 @@ export const GET = handleApi(async (req: Request) => {
       categoryColor: categories.color,
       categoryIcon: categories.icon,
       transferToAccountId: transactions.transferToAccountId,
+      transferToAccountName: sql<string>`(SELECT name FROM accounts WHERE id = ${transactions.transferToAccountId})`,
     })
     .from(transactions)
     .leftJoin(accounts, eq(accounts.id, transactions.accountId))

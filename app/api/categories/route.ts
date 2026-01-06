@@ -15,7 +15,7 @@ const ListQuery = z.object({
   kind: z.enum(["all", "income", "expense"]).default("all"),
   archived: z.enum(["all", "true", "false"]).default("all"),
   page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
+  limit: z.coerce.number().min(1).max(100).default(100),
 });
 const CreateBody = z.object({
   name: z.string().min(1).max(60),

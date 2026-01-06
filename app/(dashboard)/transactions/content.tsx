@@ -43,6 +43,7 @@ type Row = {
   categoryColor: string;
   categoryIcon: string;
   transferToAccountId: string;
+  transferToAccountName: string;
 };
 
 type ListRes = { items: Row[]; page: number; limit: number; total: number };
@@ -321,7 +322,7 @@ export default function TransactionsContent() {
               {items.map((t, i) => (
                 <TableRow key={t.id}>
                   <TableCell className="text-xs text-muted-foreground font-mono text-center">
-                    {String(i + 1).padStart(2, '0')}
+                    {String((page - 1) * limit + i + 1).padStart(2, '0')}
                   </TableCell>
                   <TableCell>
                     {new Date(t.occurredAt).toLocaleString("id-ID", {
@@ -479,7 +480,7 @@ export default function TransactionsContent() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-muted-foreground font-mono">
-                    {String(i + 1).padStart(2, '0')}
+                    {String((page - 1) * limit + i + 1).padStart(2, '0')}
                   </div>
                   <div className="min-w-0">
                     {(() => {
@@ -497,7 +498,7 @@ export default function TransactionsContent() {
                     <div className="text-xs text-muted-foreground">
                       {new Date(t.occurredAt).toLocaleString("id-ID").split(",")[0]} •{" "}
                       {t.accountName}
-                      {t.notes ? ` • ${t.notes}` : ""}
+                      {t.type === "transfer" && "  →  " + t.transferToAccountName}
                     </div>
                   </div>
                 </div>

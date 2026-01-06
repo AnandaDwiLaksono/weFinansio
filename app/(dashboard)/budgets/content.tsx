@@ -418,7 +418,7 @@ export default function BudgetsContent() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-muted-foreground font-mono">
-                    {String(idx + 1).padStart(2, '0')}
+                    {String((page - 1) * limit + idx + 1).padStart(2, '0')}
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-foreground mb-1">
@@ -496,6 +496,31 @@ export default function BudgetsContent() {
             </CardContent>
           </Card>
         ))}
+
+        {/* Pagination mobile */}
+        <div className="md:hidden flex items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground">
+            Total {total.total} budget
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >=  Math.ceil(total.total / limit)}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Berikutnya
+            </Button>
+          </div>
+        </div>
       </div>
       
       {/* FAB tambah akun (mobile) */}
@@ -526,7 +551,7 @@ function currentPeriod(startDate: number = 1) {
   if (d < startDate) {
     const prevMonth = m - 1 === 0 ? 12 : m - 1;
     const prevYear = prevMonth === 12 ? y - 1 : y;
-    
+
     return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
   } else {
     return `${y}-${String(m).padStart(2, "0")}`;
