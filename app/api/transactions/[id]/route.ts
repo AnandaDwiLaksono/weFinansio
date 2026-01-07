@@ -93,12 +93,37 @@ export const DELETE = handleApi(async (req: Request) => {
 
   const id = req.url.split('/').pop()!;
 
+  // check transaksi exists
   const trx = await db.query.transactions.findFirst({
     where: and(eq(transactions.id, id), eq(transactions.userId, userId)),
-    columns: { id: true }
+    columns: { id: true, amount: true, accountId: true, type: true, transferToAccountId: true }
   });
   if (!trx) throw new NotFoundError("Transaksi tidak ditemukan.");
 
+  // delete transaksi
   await db.delete(transactions).where(eq(transactions.id, id));
+
+  // update account balances
+  if (trx.type === "income") {
+    // reduce account balance
+    await db.update(accounts).set({
+      balance: sql`${accounts.balance} - ${trx.amount}`,
+    }).where(eq(accounts.id, trx.accountId));
+  } else if (trx.type === "expense") {
+    // increase account balance
+    await db.update(accounts).set({
+      balance: sql`${accounts.balance} + ${trx.amount}`,
+    }).where(eq(accounts.id, trx.accountId));
+  } else if (trx.type === "transfer" && trx.transferToAccountId) {
+    // adjust both accounts
+    await db.update(accounts).set({
+      balance: sql`${accounts.balance} - ${trx.amount}`,
+    }).where(eq(accounts.id, trx.accountId));
+    
+    await db.update(accounts).set({
+      balance: sql`${accounts.balance} + ${trx.amount}`,
+    }).where(eq(accounts.id, trx.transferToAccountId));
+  }
+
   return { ok: true };
 });

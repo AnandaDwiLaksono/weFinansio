@@ -338,7 +338,10 @@ export default function TransactionsContent() {
                       {t.type === "income" ? "Pemasukan" : t.type === "expense" ? "Pengeluaran" : "Transfer"}
                     </div>
                   </TableCell>
-                  <TableCell>{t.accountName}</TableCell>
+                  <TableCell>
+                    {t.accountName}
+                    {t.type === "transfer" && "  →  " + t.transferToAccountName}
+                  </TableCell>
                   <TableCell>
                     {(() => {
                       const Icon = getIconByName(t.categoryIcon);

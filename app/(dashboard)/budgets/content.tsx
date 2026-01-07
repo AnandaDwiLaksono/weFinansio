@@ -72,7 +72,7 @@ export default function BudgetsContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const limit = 10;
+  const limit = 20;
 
   const { data } = useApiQuery<Res>(
     ["budgets", { period, search, page, limit }],
