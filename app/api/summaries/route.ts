@@ -1,16 +1,31 @@
 export const runtime = "nodejs";
 
 import { and, eq, gte, lt, sql } from "drizzle-orm";
+
 import { db } from "@/lib/db";
-import { accounts, transactions, categories, users } from "@/lib/db/schema";
+import { accounts, transactions, categories, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 
-function monthRange(d = new Date()) {
-  const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split("T")[0];
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().split("T")[0];
+function periodRange(period: string, startDate: number = 1) {
+  const [y, m] = period.split("-").map(Number);
+  const start = new Date(y, m - 1, startDate + 1).toISOString().split('T')[0];
+  const end = new Date(y, m, startDate).toISOString().split('T')[0];
+
   return { start, end };
+}
+
+function currentPeriod(startDate: number = 1) {
+  const [y, m, d] = new Date().toISOString().split("T")[0].split("-").map(Number);
+  if (d < startDate) {
+    const prevMonth = m - 1 === 0 ? 12 : m - 1;
+    const prevYear = prevMonth === 12 ? y - 1 : y;
+
+    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+  } else {
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
 }
 
 export const GET = handleApi(async () => {
@@ -23,12 +38,21 @@ export const GET = handleApi(async () => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
   if (!userId) throw new UnauthorizedError("No user id in session.");
+  
+  // Get start date of the period
+  const startDate = await db.query.userSettings.findFirst({
+    where: eq(userSettings.userId, userId),
+    columns: { startDatePeriod: true }
+  });
 
-  const { start, end } = monthRange();
+  const startDatePeriod = Number(startDate?.startDatePeriod) || 1;
+  const currPeriod = currentPeriod(startDatePeriod);
+  const { start, end } = periodRange(currPeriod, startDatePeriod);
 
   // income bulan ini
   const [inc] = await db
@@ -44,27 +68,9 @@ export const GET = handleApi(async () => {
 
   // saldo akun (balance)
   const [bal] = await db
-    .select({
-      id: accounts.id,
-      name: accounts.name,
-      currencyCode: accounts.currencyCode,
-      balance: sql<string>`
-        (
-          COALESCE((
-            SELECT SUM(CASE WHEN t.type='income' THEN t.amount::numeric
-                            WHEN t.type='expense' THEN -t.amount::numeric
-                            ELSE 0 END)
-            FROM ${transactions} t
-            WHERE t.user_id = ${accounts.userId} AND t.account_id = ${accounts.id}
-          ),0)
-        )::text
-      `,
-    })
+    .select({ total: sql<string>`COALESCE(SUM(${accounts.balance}), 0)::text` })
     .from(accounts)
     .where(eq(accounts.userId, userId));
-    // .select({ total: sql<string>`COALESCE(SUM(${accounts.balance}), 0)::text` })
-    // .from(accounts)
-    // .where(eq(accounts.userId, userId));
 
   // transaksi terbaru
   const recent = await db
@@ -87,8 +93,7 @@ export const GET = handleApi(async () => {
   return {
     incomeMonth: inc?.total ?? "0",
     expenseMonth: exp?.total ?? "0",
-    // balance: bal?.total ?? "0",
-    balance: bal,
+    balance: bal?.total ?? "0",
     recent,
   };
 });

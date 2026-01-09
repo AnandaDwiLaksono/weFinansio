@@ -3,30 +3,55 @@ export const runtime = "nodejs";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { transactions, users } from "@/lib/db/schema";
+import { transactions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
 
-function startOfDay(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function periodRange(period: string, startDate: number = 1) {
+  const [y, m] = period.split("-").map(Number);
+  const start = new Date(y, m - 1, startDate + 1).toISOString().split('T')[0];
+  const end = new Date(y, m, startDate).toISOString().split('T')[0];
+
+  return { start, end };
+}
+
+function currentPeriod(startDate: number = 1) {
+  const [y, m, d] = new Date().toISOString().split("T")[0].split("-").map(Number);
+  if (d < startDate) {
+    const prevMonth = m - 1 === 0 ? 12 : m - 1;
+    const prevYear = prevMonth === 12 ? y - 1 : y;
+
+    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+  } else {
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
+}
 
 export const GET = handleApi(async () => {
   const session = await getSession();
-    let userId = session?.user?.id;
-    // fallback by email (jaga-jaga)
-    if (!userId && session?.user?.email) {
-      const u = await db.query.users.findFirst({
-        where: eq(users.email, session.user.email),
-        columns: { id: true },
-      });
-      if (u) userId = u.id;
-    }
-  
-    if (!userId) throw new UnauthorizedError("No user");
+  let userId = session?.user?.id;
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
+    });
+    
+    if (u) userId = u.id;
+  }
 
-  const end = startOfDay(new Date());
-  const start = new Date(end);
-  start.setDate(end.getDate() - 29);
+  if (!userId) throw new UnauthorizedError("No user");
+        
+  // Get start date of the period
+  const startDate = await db.query.userSettings.findFirst({
+    where: eq(userSettings.userId, userId),
+    columns: { startDatePeriod: true }
+  });
+  
+  const startDatePeriod = Number(startDate?.startDatePeriod) || 1;
+  const currPeriod = currentPeriod(startDatePeriod);
+  const { start, end } = periodRange(currPeriod, startDatePeriod);
 
   const rows = await db
     .select({
@@ -37,8 +62,8 @@ export const GET = handleApi(async () => {
     .from(transactions)
     .where(and(
       eq(transactions.userId, userId),
-      gte(transactions.occurredAt, start.toISOString().split("T")[0]),
-      lt(transactions.occurredAt, new Date(end.getTime() + 86400000).toISOString().split("T")[0])
+      gte(transactions.occurredAt, start),
+      lt(transactions.occurredAt, end)
     ))
     .groupBy(sql`1`)
     .orderBy(sql`1`);
@@ -46,7 +71,7 @@ export const GET = handleApi(async () => {
   // normalisasi 30 hari
   const out: { date: string; income: number; expense: number; net: number }[] = [];
   for (let i = 0; i < 30; i++) {
-    const d = new Date(start); d.setDate(start.getDate() + i);
+    const d = new Date(start); d.setDate(new Date(start).getDate() + i);
     const key = d.toISOString().slice(0, 10);
     const row = rows.find(r => r.day?.slice(0, 10) === key);
     const income = row ? Number(row.income) : 0;

@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,16 +13,15 @@ import GoalsPanel from "@/components/GoalsPanel";
 import Trend30Chart from "@/components/Trend30Chart";
 import FabAdd from "@/components/FabAdd";
 import PortfolioPanel from "@/components/PortofolioPanel";
-import Link from "next/link";
 
 type SummaryRes = {
-  incomeMonth: string;   // decimal string
+  incomeMonth: string; // decimal string
   expenseMonth: string;
-  balance: string;       // total saldo akun
+  balance: string; // total saldo akun
   recent: Array<{
     id: string;
-    occurredAt: string;  // ISO
-    amount: string;      // signed
+    occurredAt: string; // ISO
+    amount: string; // signed
     accountName: string;
     categoryName: string | null;
     notes: string | null;
@@ -30,14 +30,14 @@ type SummaryRes = {
 };
 
 type GoalSummary = {
-  id:string;
-  name:string;
-  target:number;
-  saved:number;
-  progress:number;
-  remaining:number;
-  targetDate?:string|null;
-  color?:string|null;
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+  progress: number;
+  remaining: number;
+  targetDate?: string | null;
+  color?: string | null;
 };
 
 export default function DashboardPage() {
@@ -54,9 +54,10 @@ export default function DashboardPage() {
     router.replace("/signin");
     return null;
   }
-  
+
   if (status === "loading" || isLoading) return <LoadingState />;
-  if (error || !data) return <div className="text-red-500">Gagal memuat data</div>;
+  if (error || !data)
+    return <div className="text-red-500">Gagal memuat data</div>;
 
   const income = rupiah(data.incomeMonth);
   const expense = rupiah(data.expenseMonth);
@@ -87,20 +88,31 @@ export default function DashboardPage() {
             <Separator />
             <ul className="divide-y">
               {data.recent.length === 0 && (
-                <li className="p-4 text-sm text-muted-foreground">Belum ada transaksi.</li>
+                <li className="p-4 text-sm text-muted-foreground">
+                  Belum ada transaksi.
+                </li>
               )}
               {data.recent.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 p-3 md:p-4">
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 p-3 md:p-4"
+                >
                   <div className="min-w-0">
                     <div className="text-sm md:text-base font-medium truncate">
-                      {t.categoryName ?? (t.type === "income" ? "Pemasukan" : "Pengeluaran")}
+                      {t.categoryName ??
+                        (t.type === "income" ? "Pemasukan" : "Pengeluaran")}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {new Date(t.occurredAt).toLocaleString()} • {t.accountName}
+                      {new Date(t.occurredAt).toLocaleString()} •{" "}
+                      {t.accountName}
                       {t.notes ? ` • ${t.notes}` : ""}
                     </div>
                   </div>
-                  <div className={`shrink-0 text-sm md:text-base font-semibold ${t.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
+                  <div
+                    className={`shrink-0 text-sm md:text-base font-semibold ${
+                      t.type === "income" ? "text-emerald-600" : "text-red-600"
+                    }`}
+                  >
                     {t.type === "income" ? "+" : "-"} {rupiah(t.amount)}
                   </div>
                 </li>
@@ -129,10 +141,24 @@ export default function DashboardPage() {
 
 function rupiah(n: string | number) {
   const v = typeof n === "string" ? Number(n) : n;
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v || 0);
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(v || 0);
 }
 
-function Kpi({ title, value, trend, children }: { title: string; value: string; trend: string; children?: React.ReactNode }) {
+function Kpi({
+  title,
+  value,
+  trend,
+  children,
+}: {
+  title: string;
+  value: string;
+  trend: string;
+  children?: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -140,7 +166,9 @@ function Kpi({ title, value, trend, children }: { title: string; value: string; 
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {children ? <p className="mt-1 text-xs text-muted-foreground">{children}</p> : null}
+        {children ? (
+          <p className="mt-1 text-xs text-muted-foreground">{children}</p>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -157,7 +185,11 @@ function LoadingState() {
 }
 
 function GoalsSummaryPanel() {
-  const { data: goalsData, isLoading: goalsLoading, error: goalsError } = useApiQuery<{items:GoalSummary[]}>(
+  const {
+    data: goalsData,
+    isLoading: goalsLoading,
+    error: goalsError,
+  } = useApiQuery<{ items: GoalSummary[] }>(
     ["goals-dashboard"],
     () => api.get("/api/goals"),
     { staleTime: 30_000 }
@@ -165,8 +197,8 @@ function GoalsSummaryPanel() {
 
   const items = (goalsData?.items ?? [])
     .slice() // copy
-    .sort((a, b)=> (b.progress || 0) - (a.progress || 0))
-    .slice(0,3); // top 3
+    .sort((a, b) => (b.progress || 0) - (a.progress || 0))
+    .slice(0, 3); // top 3
 
   return (
     <Card className="h-full">
@@ -177,17 +209,22 @@ function GoalsSummaryPanel() {
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
-        {goalsLoading && <div className="text-xs text-muted-foreground">Memuat goals…</div>}
-        {(!goalsLoading && items.length === 0) && (
-          <div className="text-xs text-muted-foreground">Belum ada goal. Tambahkan dulu di menu Goals.</div>
+        {goalsLoading && (
+          <div className="text-xs text-muted-foreground">Memuat goals…</div>
         )}
-        {items.map(g => (
+        {!goalsLoading && items.length === 0 && (
+          <div className="text-xs text-muted-foreground">
+            Belum ada goal. Tambahkan dulu di menu Goals.
+          </div>
+        )}
+        {items.map((g) => (
           <div key={g.id} className="flex items-center gap-3">
             <MiniRing progress={g.progress} color={g.color || "#3b82f6"} />
             <div className="min-w-0">
               <div className="text-sm font-medium truncate">{g.name}</div>
               <div className="text-xs text-muted-foreground truncate">
-                {rupiah(g.saved)} / {rupiah(g.target)} • {Math.round((g.progress||0)*100)}%
+                {rupiah(g.saved)} / {rupiah(g.target)} •{" "}
+                {Math.round((g.progress || 0) * 100)}%
               </div>
             </div>
           </div>
@@ -197,13 +234,15 @@ function GoalsSummaryPanel() {
   );
 }
 
-function MiniRing({ progress, color }: { progress:number; color:string }) {
+function MiniRing({ progress, color }: { progress: number; color: string }) {
   const pct = Math.round((progress || 0) * 100);
   return (
     <div className="relative h-10 w-10">
       <div
         className="h-10 w-10 rounded-full"
-        style={{ background: `conic-gradient(${color} ${pct}%, #e5e7eb ${pct}%)` }}
+        style={{
+          background: `conic-gradient(${color} ${pct}%, #e5e7eb ${pct}%)`,
+        }}
       />
       <div className="absolute inset-[6px] bg-background rounded-full grid place-items-center">
         <span className="text-[10px] font-medium">{pct}%</span>

@@ -152,8 +152,8 @@ function prevPeriod(p: string) {
 
 function periodRange(period: string, startDate: number = 1) {
   const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, startDate).toISOString().split("T")[0]; // yyyy-mm-dd
-  const end   = new Date(y, m, startDate - 1).toISOString().split("T")[0]; // last day of month
+  const start = new Date(y, m - 1, startDate + 1).toISOString().split("T")[0]; // yyyy-mm-dd
+  const end   = new Date(y, m, startDate).toISOString().split("T")[0]; // last day of month
 
   return { start, end };
 }

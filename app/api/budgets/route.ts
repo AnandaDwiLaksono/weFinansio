@@ -165,13 +165,6 @@ export const GET = handleApi(async (req: Request) => {
     .where(and(...where))
     .orderBy(categories.name);
 
-  // ringkasan total
-  // const totalLimit = items.reduce((s, i)=> s + i.limit, 0);
-  // const totalEffectiveLimit = items.reduce((s, i)=> s + i.effectiveLimit, 0);
-  // const totalSpent = items.reduce((s, i)=> s + i.spent, 0);
-  // const totalAlmostOver = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.progress >= 0.8 ? 1 : 0), 0);
-  // const totalOverBudget = items.reduce((s, i) => s + (i.effectiveLimit > 0 && i.spent > i.effectiveLimit ? 1 : 0), 0);
-
   const totalLimit = totalRows.reduce((s, i)=> s + Number(i.limitAmount || 0), 0);
   const totalEffectiveLimit = totalRows.reduce((s, i)=> s + Number(i.limitAmount || 0) + Number(i.accumulatedCarryover || 0), 0);
   const totalSpent = totalRows.reduce((s, i)=> s + (spentMap.get(i.categoryId ?? "null") || 0), 0);
@@ -298,8 +291,8 @@ function prevPeriod(p: string) {
 
 function periodRange(period: string, startDate: number = 1) {
   const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, startDate).toISOString().split('T')[0];
-  const end = new Date(y, m, startDate - 1).toISOString().split('T')[0];
+  const start = new Date(y, m - 1, startDate + 1).toISOString().split('T')[0];
+  const end = new Date(y, m, startDate).toISOString().split('T')[0];
 
   return { start, end };
 }
