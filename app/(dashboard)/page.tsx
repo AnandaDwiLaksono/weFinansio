@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import BudgetPanel from "@/components/BudgetPanel";
 import GoalsPanel from "@/components/GoalsPanel";
 import Trend30Chart from "@/components/Trend30Chart";
-import FabAdd from "@/components/FabAdd";
 import PortfolioPanel from "@/components/PortofolioPanel";
+import { getIconByName } from "@/lib/icons";
+import TransactionModal from "@/components/TransactionModal";
+import { Button } from "@/components/ui/button";
 
 type SummaryRes = {
   incomeMonth: string; // decimal string
@@ -50,6 +53,14 @@ export default function DashboardPage() {
     { enabled: status === "authenticated", staleTime: 30_000 }
   );
 
+  const { data: accounts } = useApiQuery<{
+    items: { id: string; name: string }[];
+  }>(["acc-filter"], () => api.get("/api/accounts"), { staleTime: 60_000 });
+
+  const { data: categories } = useApiQuery<{
+    items: { id: string; name: string; kind: "income" | "expense" }[];
+  }>(["cat-filter"], () => api.get("/api/categories"), { staleTime: 60_000 });
+
   if (status === "unauthenticated") {
     router.replace("/signin");
     return null;
@@ -67,20 +78,35 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* KPI cards */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Kpi title="Pemasukan (bulan ini)" value={income} trend="+">
+        <Kpi
+          title="Pemasukan (bulan ini)"
+          value={income}
+          icon="ArrowDownLeft"
+          color="green"
+        >
           Sumber utama pemasukan bulan berjalan.
         </Kpi>
-        <Kpi title="Pengeluaran (bulan ini)" value={expense} trend="-">
+        <Kpi
+          title="Pengeluaran (bulan ini)"
+          value={expense}
+          icon="ArrowUpRight"
+          color="red"
+        >
           Total spending bulan berjalan.
         </Kpi>
-        <Kpi title="Total Saldo" value={balance} trend="">
+        <Kpi
+          title="Total Saldo"
+          value={balance}
+          icon="Wallet"
+          color="blue"
+        >
           Akumulasi saldo seluruh akun.
         </Kpi>
       </section>
 
-      {/* Recent transactions */}
-      <section className="grid md:grid-cols-5 lg:grid-cols-3 gap-4">
-        <Card className="md:col-span-3 lg:col-span-2">
+      <section className="grid md:grid-cols-5 gap-4">
+        {/* Recent transactions */}
+        <Card className="md:col-span-3">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Transaksi Terbaru</CardTitle>
           </CardHeader>
@@ -122,7 +148,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Placeholder panel ringkas (bisa diisi budget/goals/portfolio ringkas) */}
-        <div className="space-y-4 md:col-span-2 lg:col-span-1">
+        <div className="space-y-4 md:col-span-2">
           <PortfolioPanel />
           <BudgetPanel />
           <GoalsPanel />
@@ -134,7 +160,19 @@ export default function DashboardPage() {
       <Trend30Chart />
 
       {/* FAB tambah transaksi (mobile) */}
-      <FabAdd />
+      <div className="md:hidden fixed bottom-16 right-4 z-40">
+        <TransactionModal
+          asChild
+          type ="add"
+          accounts={accounts?.items ?? []}
+          categories={categories?.items ?? []}
+          id=""
+        >
+          <Button className="h-12 w-12 rounded-full shadow-lg" aria-label="Tambah transaksi">
+            <Plus className="h-5 w-5" />
+          </Button>
+        </TransactionModal>
+      </div>
     </div>
   );
 }
@@ -151,18 +189,42 @@ function rupiah(n: string | number) {
 function Kpi({
   title,
   value,
-  trend,
+  icon,
+  color,
   children,
 }: {
   title: string;
   value: string;
-  trend: string;
+  icon: "ArrowDownLeft" | "ArrowUpRight" | "Wallet";
+  color: "green" | "red" | "blue";
   children?: React.ReactNode;
 }) {
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
+      <CardHeader>
+        <CardTitle className="flex justify-between">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          {(() => {
+            const Icon = getIconByName(icon);
+            return (
+              <span
+                className="inline-flex items-center gap-1 rounded-lg text-xs font-medium p-2"
+                style={{
+                  backgroundColor: color === "green"
+                    ? "rgba(16, 185, 129, 0.1)"
+                    : color === "red"
+                    ? "rgba(239, 68, 68, 0.1)"
+                    : color === "blue"
+                    ? "rgba(59, 130, 246, 0.1)"
+                    : "rgba(15, 23, 42, 0.1)",
+                  color: color || "#0f172a",
+                }}
+              >
+                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+              </span>
+            );
+          })()}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
