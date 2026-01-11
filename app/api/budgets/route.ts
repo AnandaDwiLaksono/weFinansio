@@ -181,6 +181,8 @@ export const GET = handleApi(async (req: Request) => {
       remaining: totalEffectiveLimit - totalSpent,
       almostOver: totalAlmostOver,
       overBudget: totalOverBudget,
+      startDate: start,
+      endDate: end
     }
   };
 });
