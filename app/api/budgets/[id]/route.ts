@@ -7,7 +7,7 @@ import { budgets, transactions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
-import { periodRange } from "@/lib/utils";
+import { periodRange, prevPeriod } from "@/lib/utils";
 
 const ListQuery = z.object({
   periodMonth: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
@@ -143,10 +143,3 @@ export const DELETE = handleApi(async (req: Request) => {
   await db.delete(budgets).where(eq(budgets.id, id));
   return { ok: true };
 });
-
-function prevPeriod(p: string) {
-  const [y, m] = p.split("-").map(Number);
-  const d = new Date(y, m - 2, 1);
-
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}

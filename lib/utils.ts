@@ -13,3 +13,27 @@ export function periodRange(period: string, startDate: number = 1) {
 
   return { start, end };
 }
+
+export function currentPeriod(startDate: number = 1) {
+  // Use UTC to avoid timezone issues
+  const now = new Date();
+  const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const [y, m, d] = utcDate.toISOString().split("T")[0].split("-").map(Number);
+  
+  if (d < startDate) {
+    const prevMonth = m - 1 === 0 ? 12 : m - 1;
+    const prevYear = prevMonth === 12 ? y - 1 : y;
+
+    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+  } else {
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
+}
+
+export function prevPeriod(p: string) {
+  const [y, m] = p.split("-").map(Number);
+  // Use Date.UTC to avoid timezone issues
+  const d = new Date(Date.UTC(y, m - 2, 1));
+
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}

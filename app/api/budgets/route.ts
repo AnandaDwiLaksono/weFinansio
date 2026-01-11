@@ -8,7 +8,7 @@ import { budgets, categories, transactions, users, userSettings } from "@/lib/db
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { BadRequestError, UnauthorizedError } from "@/lib/errors";
-import { periodRange } from "@/lib/utils";
+import { periodRange, prevPeriod } from "@/lib/utils";
 
 const ListQuery = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
@@ -284,10 +284,3 @@ export const POST = handleApi(async (req: Request) => {
 
   return { id: row?.id };
 });
-
-function prevPeriod(p: string) {
-  const [y, m] = p.split("-").map(Number);
-  const d = new Date(y, m - 2, 1);
-
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}

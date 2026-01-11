@@ -8,6 +8,7 @@ import { budgets, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
+import { prevPeriod } from "@/lib/utils";
 
 const ListQuery = z.object({
   lastPeriodMonth: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
@@ -44,10 +45,3 @@ export const GET = handleApi(async (req: Request) => {
 
   return { amount: budget.amount };
 });
-
-function prevPeriod(p: string) {
-  const [y, m] = p.split("-").map(Number);
-  const date = new Date(y, m - 2);
-
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}

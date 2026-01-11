@@ -37,6 +37,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Checkbox } from "./ui/checkbox";
+import { currentPeriod } from "@/lib/utils";
 
 // Icon mapper
 const iconMap: Record<
@@ -334,17 +335,6 @@ export default function BudgetModal({
       </DialogContent>
     </Dialog>
   );
-}
-
-function currentPeriod(startDate: number = 1) {
-  const [y, m, d] = new Date().toISOString().split("T")[0].split("-").map(Number);
-  if (d < startDate) {
-    const prevMonth = m - 1 === 0 ? 12 : m - 1;
-    const prevYear = prevMonth === 12 ? y - 1 : y;
-    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
-  } else {
-    return `${y}-${String(m).padStart(2, "0")}`;
-  }
 }
 
 const getIconComponent = (iconName: string) => {

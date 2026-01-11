@@ -8,7 +8,7 @@ import { budgets, transactions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { UnauthorizedError } from "@/lib/errors";
-import { periodRange } from "@/lib/utils";
+import { periodRange, prevPeriod } from "@/lib/utils";
 
 const Q = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
@@ -23,6 +23,7 @@ export const POST = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -143,10 +144,3 @@ export const POST = handleApi(async (req: Request) => {
 
   return { ok: true, copied };
 });
-
-function prevPeriod(p: string) {
-  const [y, m] = p.split("-").map(Number);
-  const date = new Date(y, m - 2);
-
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}

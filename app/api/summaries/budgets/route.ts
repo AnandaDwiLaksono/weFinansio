@@ -7,19 +7,7 @@ import { budgets, categories, transactions, users, userSettings } from "@/lib/db
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
-import { periodRange } from "@/lib/utils";
-
-function currentPeriod(startDate: number = 1) {
-  const [y, m, d] = new Date().toISOString().split("T")[0].split("-").map(Number);
-  if (d < startDate) {
-    const prevMonth = m - 1 === 0 ? 12 : m - 1;
-    const prevYear = prevMonth === 12 ? y - 1 : y;
-
-    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
-  } else {
-    return `${y}-${String(m).padStart(2, "0")}`;
-  }
-}
+import { periodRange, currentPeriod } from "@/lib/utils";
 
 export const GET = handleApi(async () => {
   const session = await getSession();
