@@ -8,6 +8,7 @@ import { budgets, transactions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
 import { UnauthorizedError } from "@/lib/errors";
+import { periodRange } from "@/lib/utils";
 
 const Q = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
@@ -148,12 +149,4 @@ function prevPeriod(p: string) {
   const date = new Date(y, m - 2);
 
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function periodRange(period: string, startDate: number = 1) {
-  const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, startDate + 1).toISOString().split("T")[0]; // yyyy-mm-dd
-  const end   = new Date(y, m, startDate).toISOString().split("T")[0]; // last day of month
-
-  return { start, end };
 }

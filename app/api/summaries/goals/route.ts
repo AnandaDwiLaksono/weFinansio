@@ -7,14 +7,7 @@ import { goals, goalContributions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
-
-function periodRange(period: string, startDate: number = 1) {
-  const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, startDate + 1).toISOString().split('T')[0];
-  const end = new Date(y, m, startDate).toISOString().split('T')[0];
-
-  return { start, end };
-}
+import { periodRange } from "@/lib/utils";
 
 function currentPeriod(startDate: number = 1) {
   const [y, m, d] = new Date().toISOString().split("T")[0].split("-").map(Number);
