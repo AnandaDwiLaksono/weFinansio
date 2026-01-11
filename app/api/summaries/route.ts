@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { accounts, transactions, categories, users, userSettings } from "@/lib/db/schema";
@@ -58,13 +58,13 @@ export const GET = handleApi(async () => {
   const [inc] = await db
     .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'income' THEN ${transactions.amount} END), 0)::text` })
     .from(transactions)
-    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lt(transactions.occurredAt, end)));
+    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lte(transactions.occurredAt, end)));
 
   // expense bulan ini
   const [exp] = await db
     .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} END), 0)::text` })
     .from(transactions)
-    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lt(transactions.occurredAt, end)));
+    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lte(transactions.occurredAt, end)));
 
   // saldo akun (balance)
   const [bal] = await db

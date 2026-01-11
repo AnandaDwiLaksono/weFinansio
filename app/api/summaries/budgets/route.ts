@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { budgets, categories, transactions, users, userSettings } from "@/lib/db/schema";
@@ -60,7 +60,7 @@ export const GET = handleApi(async () => {
       spent: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} END), 0)::text`,
     })
     .from(transactions)
-    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lt(transactions.occurredAt, end)))
+    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lte(transactions.occurredAt, end)))
     .groupBy(transactions.categoryId);
 
   const spentMap = new Map<string, number>();

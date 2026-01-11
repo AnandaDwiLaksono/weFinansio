@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { transactions, users, userSettings } from "@/lib/db/schema";
@@ -63,7 +63,7 @@ export const GET = handleApi(async () => {
     .where(and(
       eq(transactions.userId, userId),
       gte(transactions.occurredAt, start),
-      lt(transactions.occurredAt, end)
+      lte(transactions.occurredAt, end)
     ))
     .groupBy(sql`1`)
     .orderBy(sql`1`);

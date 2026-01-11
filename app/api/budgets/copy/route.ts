@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, eq, sql, gte, lt } from "drizzle-orm";
+import { and, eq, sql, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -68,7 +68,7 @@ export const POST = handleApi(async (req: Request) => {
               eq(transactions.userId, userId),
               eq(transactions.categoryId, s.categoryId),
               gte(transactions.occurredAt, prevStart),
-              lt(transactions.occurredAt, prevEnd)
+              lte(transactions.occurredAt, prevEnd)
             ));
 
           const prevSpent = Number(prevSpentResult[0].spent ?? "0");
@@ -105,7 +105,7 @@ export const POST = handleApi(async (req: Request) => {
               eq(transactions.userId, userId),
               eq(transactions.categoryId, s.categoryId),
               gte(transactions.occurredAt, prevStart),
-              lt(transactions.occurredAt, prevEnd)
+              lte(transactions.occurredAt, prevEnd)
             ));
 
           const prevSpent = Number(prevSpentResult[0].spent ?? "0");
