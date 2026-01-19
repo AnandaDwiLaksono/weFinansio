@@ -12,7 +12,7 @@ import { handleApi } from "@/lib/http";
 const UpdateBody = z.object({
   occurredAt: z.string(),
   amount: z.number().positive(),
-  notes: z.string().max(200).nullable().optional(),
+  note: z.string().max(200).nullable().optional(),
 });
 
 export const PATCH = handleApi(async (req: Request) => {
@@ -45,7 +45,7 @@ export const PATCH = handleApi(async (req: Request) => {
   await db.update(transactions).set({
     occurredAt: body.occurredAt,
     amount: String(body.amount),
-    note: body.notes,
+    note: body.note,
   }).where(eq(transactions.id, id));
 
   // update account balances if needed

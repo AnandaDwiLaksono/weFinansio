@@ -301,6 +301,10 @@ export default function TransactionModal({
 
           queryClient.invalidateQueries({ queryKey: ["transactions"] });
           queryClient.invalidateQueries({ queryKey: ["accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["summary"] });
+          queryClient.invalidateQueries({ queryKey: ["trend30d"] });
+          queryClient.invalidateQueries({ queryKey: ["budget-summary"] });
+          queryClient.invalidateQueries({ queryKey: ["goals-summary"] });
           
           setOpen(false);
         },
