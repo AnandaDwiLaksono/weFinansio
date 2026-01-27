@@ -142,7 +142,23 @@ export const POST = handleApi(async (req: Request) => {
       }).returning({ id: transactions.id });
 
       transactionId = txn.id;
+
+      // update account balance untuk transfer
+      await db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} - ${b.amount}`,
+        })
+        .where(eq(accounts.id, txAccountId));
+
+      await db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} + ${b.amount}`,
+        })
+        .where(eq(accounts.id, txTransferToAccountId));
     } else if (b.transactionId) {
+      // Link ke transaction existing, pastikan valid
       const existingTxn = await db.query.transactions.findFirst({
         where: and(eq(transactions.id, b.transactionId), eq(transactions.userId, userId)),
         columns: { id: true }
