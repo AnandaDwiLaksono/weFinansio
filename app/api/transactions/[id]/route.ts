@@ -117,11 +117,11 @@ export const DELETE = handleApi(async (req: Request) => {
   } else if (trx.type === "transfer" && trx.transferToAccountId) {
     // adjust both accounts
     await db.update(accounts).set({
-      balance: sql`${accounts.balance} - ${trx.amount}`,
+      balance: sql`${accounts.balance} + ${trx.amount}`,
     }).where(eq(accounts.id, trx.accountId));
     
     await db.update(accounts).set({
-      balance: sql`${accounts.balance} + ${trx.amount}`,
+      balance: sql`${accounts.balance} - ${trx.amount}`,
     }).where(eq(accounts.id, trx.transferToAccountId));
   }
 
