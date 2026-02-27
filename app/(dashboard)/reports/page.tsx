@@ -23,6 +23,7 @@ import {
   Cell,
 } from "recharts";
 import { keepPreviousData } from "@tanstack/react-query";
+import { rupiah } from "@/lib/utils";
 
 type OverviewRow = { period:string; income:number; expense:number; net:number };
 type OverviewRes = { from:string; to:string; items:OverviewRow[] };
@@ -279,12 +280,4 @@ export default function ReportsPage() {
       </div>
     </div>
   );
-}
-
-function rupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n || 0);
 }

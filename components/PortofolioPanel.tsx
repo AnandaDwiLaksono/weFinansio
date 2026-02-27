@@ -4,6 +4,7 @@ import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { rupiah } from "@/lib/utils";
 
 type Summary = {
   totalValue: number;
@@ -91,9 +92,6 @@ export default function PortfolioPanel() {
   );
 }
 
-function rupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
-}
 function pct(p: number) { return `${Math.round((p || 0)*100)}%`; }
 function sign(x: number) { return x >= 0 ? "+" : "-"; }
 

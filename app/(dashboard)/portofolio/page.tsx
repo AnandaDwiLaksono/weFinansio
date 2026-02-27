@@ -11,6 +11,7 @@ import { Plus } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import AddPortofolioAssetModal from "@/components/AddPortofolioAssetModal";
 import AddPortofolioTradeModal from "@/components/AddPortofolioTradeModal";
+import { rupiah } from "@/lib/utils";
 
 type AssetRow = {
   id:string; symbol:string; name:string;
@@ -249,9 +250,6 @@ function PortfolioDetailPanel({ assetId }: { assetId: string | null }) {
   );
 }
 
-function rupiah(n:number){
-  return new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n||0);
-}
 function formatQty(n:number){
   if (Math.abs(n) >= 1) return n.toLocaleString("id-ID",{maximumFractionDigits:2});
   return n.toFixed(4);

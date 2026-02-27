@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import { rupiah } from "@/lib/utils";
 
 type Row = {
   id: string;
@@ -428,14 +429,6 @@ export default function GoalsContent() {
 
 function fmtDate(s?: string | null) {
   return s ? new Date(s).toLocaleDateString("id-ID") : "";
-}
-
-function rupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n || 0);
 }
 
 // Ring progress (conic-gradient, ringan)

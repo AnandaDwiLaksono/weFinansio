@@ -2,6 +2,7 @@
 
 import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { rupiah } from "@/lib/utils";
 
 type GoalRow = {
   id: string;
@@ -63,8 +64,4 @@ function GoalItem({ name, target, saved, pct, dueDate }: GoalRow) {
       </div>
     </div>
   );
-}
-
-function rupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
 }

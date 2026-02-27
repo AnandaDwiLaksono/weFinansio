@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { rupiah } from "@/lib/utils";
 
 type Row = {
   id: string;
@@ -606,16 +607,6 @@ export default function AccountsContent() {
       </div>
     </div>
   );
-}
-
-function rupiah(n: string | number) {
-  const v = typeof n === "string" ? Number(n) : n;
-  
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0
-  }).format(v || 0);
 }
 
 function labelType(t: Row["type"]) {

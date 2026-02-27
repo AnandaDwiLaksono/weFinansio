@@ -37,3 +37,12 @@ export function prevPeriod(p: string) {
 
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+
+export function rupiah(n: string | number) {
+  const v = typeof n === "string" ? Number(n) : n;
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(v || 0);
+}

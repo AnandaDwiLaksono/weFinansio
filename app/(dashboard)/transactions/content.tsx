@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { getIconByName } from "@/lib/icons";
 import TransactionModal from "@/components/TransactionModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import { rupiah } from "@/lib/utils";
 
 type Row = {
   id: string;
@@ -622,13 +623,4 @@ export default function TransactionsContent() {
       </div>
     </div>
   );
-}
-
-function rupiah(n: string | number) {
-  const v = typeof n === "string" ? Number(n) : n;
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(v || 0);
 }

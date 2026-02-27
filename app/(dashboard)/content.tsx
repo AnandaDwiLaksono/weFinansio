@@ -3,19 +3,19 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Ellipsis } from "lucide-react";
 
 import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import BudgetPanel from "@/components/BudgetPanel";
 import GoalsPanel from "@/components/GoalsPanel";
 import Trend30Chart from "@/components/Trend30Chart";
 import PortfolioPanel from "@/components/PortofolioPanel";
-import { getIconByName } from "@/lib/icons";
 import TransactionModal from "@/components/TransactionModal";
 import { Button } from "@/components/ui/button";
+import KPICard from "@/components/KPICard";
+import { rupiah } from "@/lib/utils";
 
 type SummaryRes = {
   incomeMonth: string; // decimal string
@@ -78,46 +78,52 @@ export default function DashboardContent() {
     <div className="space-y-6">
       {/* KPI cards */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Kpi
+        <KPICard
           title="Pemasukan (bulan ini)"
           value={income}
           icon="ArrowDownLeft"
-          color="green"
+          color="#10b981"
         >
           Sumber utama pemasukan bulan berjalan.
-        </Kpi>
-        <Kpi
+        </KPICard>
+        <KPICard
           title="Pengeluaran (bulan ini)"
           value={expense}
           icon="ArrowUpRight"
-          color="red"
+          color="#ef4444"
         >
           Total spending bulan berjalan.
-        </Kpi>
-        <Kpi
+        </KPICard>
+        <KPICard
           title="Total Saldo"
           value={balance}
           icon="Wallet"
-          color="blue"
+          color="#3b82f6"
         >
           Akumulasi saldo seluruh akun.
-        </Kpi>
+        </KPICard>
       </section>
 
       <section className="grid md:grid-cols-5 gap-4">
         {/* Recent transactions */}
-        <Card className="md:col-span-3">
-          <CardHeader className="pb-2">
+        <Card className="md:col-span-3 gap-2.5 p-6">
+          <CardHeader className="p-0 flex justify-between items-center">
             <CardTitle className="text-base">Transaksi Terbaru</CardTitle>
+            <Link
+              href="/transactions"
+              className="text-xs text-muted-foreground"
+            >
+              <Ellipsis />
+            </Link>
           </CardHeader>
           <CardContent className="p-0">
-            <Separator />
             <ul className="divide-y">
               {data.recent.length === 0 && (
                 <li className="p-4 text-sm text-muted-foreground">
                   Belum ada transaksi.
                 </li>
               )}
+
               {data.recent.map((t) => (
                 <li
                   key={t.id}
@@ -174,65 +180,6 @@ export default function DashboardContent() {
         </TransactionModal>
       </div>
     </div>
-  );
-}
-
-function rupiah(n: string | number) {
-  const v = typeof n === "string" ? Number(n) : n;
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(v || 0);
-}
-
-function Kpi({
-  title,
-  value,
-  icon,
-  color,
-  children,
-}: {
-  title: string;
-  value: string;
-  icon: "ArrowDownLeft" | "ArrowUpRight" | "Wallet";
-  color: "green" | "red" | "blue";
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex justify-between">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          {(() => {
-            const Icon = getIconByName(icon);
-            return (
-              <span
-                className="inline-flex items-center gap-1 rounded-lg text-xs font-medium p-2"
-                style={{
-                  backgroundColor: color === "green"
-                    ? "rgba(16, 185, 129, 0.1)"
-                    : color === "red"
-                    ? "rgba(239, 68, 68, 0.1)"
-                    : color === "blue"
-                    ? "rgba(59, 130, 246, 0.1)"
-                    : "rgba(15, 23, 42, 0.1)",
-                  color: color || "#0f172a",
-                }}
-              >
-                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-              </span>
-            );
-          })()}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {children ? (
-          <p className="mt-1 text-xs text-muted-foreground">{children}</p>
-        ) : null}
-      </CardContent>
-    </Card>
   );
 }
 

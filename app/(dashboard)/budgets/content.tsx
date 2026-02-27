@@ -26,7 +26,8 @@ import {
   TableRow
 } from "@/components/ui/table";
 import ConfirmationModal from "@/components/ConfirmationModal";
-import { currentPeriod } from "@/lib/utils";
+import { currentPeriod, rupiah } from "@/lib/utils";
+import KPICard from "@/components/KPICard";
 
 type Item = {
   id: string;
@@ -85,8 +86,6 @@ export default function BudgetsContent() {
     { placeholderData: keepPreviousData }
   );
 
-  console.log({ data });
-
   const del = useApiMutation<{ ok: true }, { id: string }>(
     ({ id }) => api.del(`/api/budgets/${id}`),
     { onSuccess: () => {
@@ -126,40 +125,50 @@ export default function BudgetsContent() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <h1 className="text-xl font-medium mb-4 text-foreground text-wrap">
             Kelola dan pantau alokasi pengeluaran Anda per kategori.
           </h1>
-          <div className="flex flex-wrap gap-2">
-            <p>
-              Periode {period} 
-            </p>
-            <div className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-              Total Budget: {rupiah(total.effectiveLimit)}
-            </div>
-            <div className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
-              Terpakai: {rupiah(total.spent)}
-            </div>
-            <div className="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
-              Sisa: {rupiah(total.remaining)}
-            </div>
+          <div className="hidden md:flex gap-2">
+            <BudgetModal
+              asChild
+              type="add"
+              startDate={startDate}
+            >
+              <Button size="sm" className="cursor-pointer">
+                <Plus className="h-4 w-4 mr-2" /> Tambah Budget
+              </Button>
+            </BudgetModal>
           </div>
         </div>
-        <div className="hidden md:flex gap-2">
-          <BudgetModal
-            asChild
-            type="add"
-            startDate={startDate}
-          >
-            <Button size="sm" className="cursor-pointer">
-              <Plus className="h-4 w-4 mr-2" /> Tambah Budget
-            </Button>
-          </BudgetModal>
-        </div>
+        {/* KPI cards */}
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPICard
+            title="Budget Bulan Ini"
+            value={rupiah(total.limit)}
+            icon="Wallet"
+            color="#2563eb"
+          />
+          <KPICard
+            title="Total Budget Akumulasi"
+            value={rupiah(total.effectiveLimit)}
+            icon="Layers"
+            color="#7c3aed"
+          />
+          <KPICard
+            title="Terpakai"
+            value={rupiah(total.spent)}
+            icon="TrendingUp"
+            color="#ea580c"
+          />
+          <KPICard
+            title="Sisa"
+            value={rupiah(total.remaining)}
+            icon="PiggyBank"
+            color="#16a34a"
+          />
+        </section>
       </div>
 
       {/* Filter */}
@@ -537,12 +546,4 @@ export default function BudgetsContent() {
       </div>
     </div>
   );
-}
-
-function rupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n || 0);
 }

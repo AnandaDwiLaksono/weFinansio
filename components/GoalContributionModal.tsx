@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useQueryClient } from "@tanstack/react-query";
+import { rupiah } from "@/lib/utils";
 
 type EntryRow = {
   id: string;
@@ -349,12 +350,4 @@ export default function GoalContributionModal({
       </DialogContent>
     </Dialog>
   );
-}
-
-function rupiah(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n || 0);
 }
