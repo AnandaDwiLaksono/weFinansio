@@ -61,15 +61,18 @@ export const GET = handleApi(async () => {
       amount: sql<string>`${transactions.amount}::text`,
       type: transactions.type,
       accountName: accounts.name,
+      transferToAccountName: sql<string>`(SELECT name FROM accounts WHERE id = ${transactions.transferToAccountId})`,
       categoryName: categories.name,
-      // notes: transactions.notes,
+      categoryColor: categories.color,
+      categoryIcon: categories.icon,
+      // note: transactions.note,
     })
     .from(transactions)
     .leftJoin(accounts, eq(transactions.accountId, accounts.id))
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(eq(transactions.userId, userId))
     .orderBy(sql`occurred_at DESC`)
-    .limit(8);
+    .limit(10);
 
   return {
     incomeMonth: inc?.total ?? "0",

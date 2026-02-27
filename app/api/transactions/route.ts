@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { and, desc, eq, gte, ilike, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -54,7 +54,7 @@ export const GET = handleApi(async (req: Request) => {
     eq(transactions.userId, userId),
     p.search ? ilike(transactions.note, `%${p.search}%`) : undefined,
     p.type && p.type !== "all" ? eq(transactions.type, p.type) : undefined,
-    p.accountId && p.accountId !== "all" ? eq(transactions.accountId, p.accountId) : undefined,
+    p.accountId && p.accountId !== "all" ? or(eq(transactions.accountId, p.accountId), eq(transactions.transferToAccountId, p.accountId)) : undefined,
     p.categoryId && p.categoryId !== "all" ? eq(transactions.categoryId, p.categoryId) : undefined,
     p.dateFrom ? gte(transactions.occurredAt, p.dateFrom) : undefined,
     p.dateTo ? lte(transactions.occurredAt, p.dateTo) : undefined,

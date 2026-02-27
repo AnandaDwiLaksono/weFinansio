@@ -16,6 +16,7 @@ import TransactionModal from "@/components/TransactionModal";
 import { Button } from "@/components/ui/button";
 import KPICard from "@/components/KPICard";
 import { rupiah } from "@/lib/utils";
+import { getIconByName } from "@/lib/icons";
 
 type SummaryRes = {
   incomeMonth: string; // decimal string
@@ -26,9 +27,12 @@ type SummaryRes = {
     occurredAt: string; // ISO
     amount: string; // signed
     accountName: string;
+    transferToAccountName?: string | null;
     categoryName: string | null;
-    notes: string | null;
-    type: "income" | "expense";
+    type: "income" | "expense" | "transfer";
+    categoryColor?: string | null;
+    categoryIcon?: string | null;
+    // note?: string | null;
   }>;
 };
 
@@ -124,31 +128,54 @@ export default function DashboardContent() {
                 </li>
               )}
 
-              {data.recent.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 p-3 md:p-4"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm md:text-base font-medium truncate">
-                      {t.categoryName ??
-                        (t.type === "income" ? "Pemasukan" : "Pengeluaran")}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {new Date(t.occurredAt).toLocaleString()} •{" "}
-                      {t.accountName}
-                      {t.notes ? ` • ${t.notes}` : ""}
-                    </div>
-                  </div>
-                  <div
-                    className={`shrink-0 text-sm md:text-base font-semibold ${
-                      t.type === "income" ? "text-emerald-600" : "text-red-600"
-                    }`}
+              {data.recent.map((t) => {
+                // const Icon = getIconByName(t.categoryIcon || "");
+                const Icon = t.type === "transfer" ? getIconByName("ArrowRightLeft") : getIconByName(t.categoryIcon || "");
+                const color = t.categoryColor || "#3b82f6";
+                return (
+                  <li
+                    key={t.id}
+                    className="flex items-center justify-between gap-3 p-3 md:p-4"
                   >
-                    {t.type === "income" ? "+" : "-"} {rupiah(t.amount)}
-                  </div>
-                </li>
-              ))}
+                    <div className="flex gap-4">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-lg text-xs font-medium py-2 px-3.5"
+                        style={{
+                          backgroundColor: color ? `${color}1A` : "transparent", // 10% opacity
+                          color: color || "#0f172a",
+                        }}
+                      >
+                        {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-sm md:text-base font-medium truncate">
+                          {t.categoryName ??
+                            (t.type === "income" ? "Pemasukan" : t.type === "expense" ? "Pengeluaran" : "Transfer")}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {new Date(t.occurredAt)
+                            .toLocaleString("id-ID", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })
+                          } •{" "} 
+                          {t.accountName}
+                          {t.type === "transfer" && "  →  " + t.transferToAccountName}
+                          {/* {t.note ? ` • ${t.note}` : ""} */}
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className={`shrink-0 text-sm md:text-base font-semibold ${
+                        t.type === "income" ? "text-emerald-600" : t.type === "expense" ? "text-red-600" : "text-blue-600"
+                      }`}
+                    >
+                      {t.type === "income" ? "+" : t.type === "expense" ? "-" : ""} {rupiah(t.amount)}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>
