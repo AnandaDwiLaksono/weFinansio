@@ -4,7 +4,7 @@ import { useApiQuery, api } from "@/lib/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { rupiah } from "@/lib/utils";
+import { rupiah, percentage } from "@/lib/utils";
 
 type Summary = {
   totalValue: number;
@@ -55,7 +55,7 @@ export default function PortfolioPanel() {
           <div>
             <div className="text-muted-foreground">P/L</div>
             <div className={`font-semibold ${s?.totalPL >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {sign(s?.totalPL)} {rupiah(Math.abs(s?.totalPL))} ({pct(s?.totalPLPct)})
+              {sign(s?.totalPL)} {rupiah(Math.abs(s?.totalPL))} ({percentage(s?.totalPLPct)})
             </div>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function PortfolioPanel() {
                 <div className="text-sm font-semibold">{rupiah(a.value)}</div>
                 <div className="text-xs">
                   <Badge variant={a.pl >= 0 ? "secondary" : "destructive"}>
-                    {sign(a.pl)} {rupiah(Math.abs(a.pl))} ({pct(a.plPct)})
+                    {sign(a.pl)} {rupiah(Math.abs(a.pl))} ({percentage(a.plPct)})
                   </Badge>
                 </div>
               </div>
@@ -92,7 +92,6 @@ export default function PortfolioPanel() {
   );
 }
 
-function pct(p: number) { return `${Math.round((p || 0)*100)}%`; }
 function sign(x: number) { return x >= 0 ? "+" : "-"; }
 
 function SkeletonPanel() {

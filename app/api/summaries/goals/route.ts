@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { goals, goalContributions, users, userSettings } from "@/lib/db/schema";
@@ -55,9 +55,10 @@ export const GET = handleApi(async () => {
       target: sql<string>`${goals.targetAmount}::text`,
       dueDate: goals.targetDate,
       saved: sql<string>`COALESCE(${goals.startAmount}, 0)::text`, // string
+      color: goals.color,
     })
     .from(goals)
-    .where(eq(goals.userId, userId));
+    .where(and(eq(goals.userId, userId), eq(goals.archived, false)));
 
   return rows.map(g => {
     const agg = map.get(String(g.id)) ?? { saved: 0, savedThisMonth: 0 };
@@ -74,6 +75,7 @@ export const GET = handleApi(async () => {
       savedThisMonth: agg.savedThisMonth,
       pct,
       dueDate: g.dueDate,
+      color: g.color,
     };
   });
 });

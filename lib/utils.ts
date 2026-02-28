@@ -46,3 +46,7 @@ export function rupiah(n: string | number) {
     maximumFractionDigits: 0,
   }).format(v || 0);
 }
+
+export function percentage(value: number) {
+  return `${Math.round((value || 0) * 100)}%`;
+}

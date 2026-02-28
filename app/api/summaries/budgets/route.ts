@@ -56,7 +56,8 @@ export const GET = handleApi(async () => {
     })
     .from(budgets)
     .leftJoin(categories, eq(categories.id, budgets.categoryId))
-    .where(and(eq(budgets.userId, userId), eq(budgets.periodMonth, currPeriod)));
+    .where(and(eq(budgets.userId, userId), eq(budgets.periodMonth, currPeriod)))
+    .orderBy(categories.name);
 
   const data = rows.map(r => {
     const planned = Number(r.amount ?? 0);
@@ -71,5 +72,5 @@ export const GET = handleApi(async () => {
     };
   });
 
-  return data.sort((a, b) => b.spent - a.spent).slice(0, 8);
+  return data;
 });

@@ -83,20 +83,20 @@ export default function DashboardContent() {
       {/* KPI cards */}
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KPICard
-          title="Pemasukan (bulan ini)"
+          title="Pemasukan (periode ini)"
           value={income}
           icon="ArrowDownLeft"
           color="#10b981"
         >
-          Sumber utama pemasukan bulan berjalan.
+          Sumber utama pemasukan periode berjalan.
         </KPICard>
         <KPICard
-          title="Pengeluaran (bulan ini)"
+          title="Pengeluaran (periode ini)"
           value={expense}
           icon="ArrowUpRight"
           color="#ef4444"
         >
-          Total spending bulan berjalan.
+          Total spending periode berjalan.
         </KPICard>
         <KPICard
           title="Total Saldo"
