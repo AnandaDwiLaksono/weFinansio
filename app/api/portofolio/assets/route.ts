@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { eq, sql, asc } from "drizzle-orm";
 import { z } from "zod";
+
 import { db } from "@/lib/db";
 import { assetsMaster, portfolioTx, users } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
@@ -9,15 +10,43 @@ import { handleApi } from "@/lib/http";
 import { UnauthorizedError } from "@/lib/errors";
 import { convertToBase, getFxMap, getUserBaseCurrency } from "@/lib/fx";
 
-const Q = z.object({
+const ListQuery = z.object({
   q: z.string().optional(),
 });
 
 const CreateBody = z.object({
-  symbol: z.string().min(1),
-  name: z.string().min(1),
-  type: z.enum(["stock","crypto","mutual_fund","cash","other"]),
+  // Required fields
+  symbol: z.string().min(1).max(20),
+  name: z.string().min(1).max(160),
+  type: z.enum([
+    "stock",
+    "mutual_fund",
+    "bond",
+    "government_bond",
+    "fixed_deposit",
+    "savings_account",
+    "precious_metal",
+    "foreign_currency",
+    "crypto",
+    "other",
+  ]),
   currency: z.string().length(3),
+  
+  // Optional metadata
+  description: z.string().max(500).optional(),
+  issuer: z.string().max(160).optional(),
+  isin: z.string().max(20).optional(),
+  source: z.string().max(50).optional(),
+  note: z.string().optional(),
+  
+  // Type-specific fields
+  coupon: z.number().positive().max(99.99).optional(),
+  interestRate: z.number().positive().max(99.99).optional(),
+  maturityDate: z.string().optional(), // ISO date string
+  
+  // Trading info
+  minimumUnit: z.number().positive().default(1),
+  decimals: z.number().int().min(0).max(18).default(8),
 });
 
 export const GET = handleApi(async (req: Request) => {
@@ -34,7 +63,8 @@ export const GET = handleApi(async (req: Request) => {
 
   if (!userId) throw new UnauthorizedError("No user");
 
-  const p = Q.parse(Object.fromEntries(new URL(req.url).searchParams));
+  const url = new URL(req.url);
+  const p = ListQuery.parse(Object.fromEntries(url.searchParams));
 
   // Ambil semua trades per asset untuk hitung posisi & cost basis
   const trades = await db
@@ -138,18 +168,38 @@ export const POST = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
   if (!userId) throw new UnauthorizedError("No user");
 
-  const b = CreateBody.parse(await req.json());
+  const body = CreateBody.parse(await req.json());
+  
+  // Type-specific validation
+  if ((body.type === "bond" || body.type === "government_bond") && !body.coupon) {
+    throw new UnauthorizedError("Coupon rate required for bonds");
+  }
+  if ((body.type === "fixed_deposit" || body.type === "savings_account") && !body.interestRate) {
+    throw new UnauthorizedError("Interest rate required for deposits/savings");
+  }
+  
   const [row] = await db.insert(assetsMaster).values({
     userId,
-    symbol: b.symbol.toUpperCase(),
-    name: b.name,
-    type: b.type,
-    currencyCode: b.currency.toUpperCase(),
+    symbol: body.symbol.toUpperCase(),
+    name: body.name,
+    type: body.type,
+    currencyCode: body.currency.toUpperCase(),
+    description: body.description,
+    issuer: body.issuer,
+    isin: body.isin?.toUpperCase(),
+    source: body.source,
+    note: body.note,
+    coupon: body.coupon ? body.coupon.toString() : null,
+    interestRate: body.interestRate ? body.interestRate.toString() : null,
+    maturityDate: body.maturityDate || null,
+    minimumUnit: body.minimumUnit.toString(),
+    decimals: body.decimals,
   }).returning({ id: assetsMaster.symbol });
 
   return { id: row?.id };

@@ -220,56 +220,6 @@ function LoadingState() {
   );
 }
 
-function GoalsSummaryPanel() {
-  const {
-    data: goalsData,
-    isLoading: goalsLoading,
-    error: goalsError,
-  } = useApiQuery<{ items: GoalSummary[] }>(
-    ["goals-dashboard"],
-    () => api.get("/api/goals"),
-    { staleTime: 30_000 }
-  );
-
-  const items = (goalsData?.items ?? [])
-    .slice() // copy
-    .sort((a, b) => (b.progress || 0) - (a.progress || 0))
-    .slice(0, 3); // top 3
-
-  return (
-    <Card className="h-full">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Goals utama</CardTitle>
-        <Link href="/goals" className="text-xs text-primary hover:underline">
-          Lihat semua
-        </Link>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {goalsLoading && (
-          <div className="text-xs text-muted-foreground">Memuat goals…</div>
-        )}
-        {!goalsLoading && items.length === 0 && (
-          <div className="text-xs text-muted-foreground">
-            Belum ada goal. Tambahkan dulu di menu Goals.
-          </div>
-        )}
-        {items.map((g) => (
-          <div key={g.id} className="flex items-center gap-3">
-            <MiniRing progress={g.progress} color={g.color || "#3b82f6"} />
-            <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{g.name}</div>
-              <div className="text-xs text-muted-foreground truncate">
-                {rupiah(g.saved)} / {rupiah(g.target)} •{" "}
-                {Math.round((g.progress || 0) * 100)}%
-              </div>
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
 function MiniRing({ progress, color }: { progress: number; color: string }) {
   const pct = Math.round((progress || 0) * 100);
   return (

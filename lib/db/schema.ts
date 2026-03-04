@@ -13,6 +13,7 @@ import {
   index,
   uniqueIndex,
   char,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -37,11 +38,15 @@ export const txStatus = pgEnum("tx_status", ["pending", "cleared"]);
 export const syncStatus = pgEnum("sync_status", ["pending", "synced", "failed"]);
 
 export const assetType = pgEnum("asset_type", [
-  "stock",
-  "mutual_fund",
-  "bond",
-  "crypto",
-  "cash",
+  "stock",              // Saham
+  "mutual_fund",        // Reksa dana
+  "bond",               // Obligasi korporat
+  "government_bond",    // SBN / Surat Berharga Negara
+  "fixed_deposit",      // Deposito berjangka
+  "precious_metal",     // Logam mulia (emas, perak, platinum)
+  "crypto",             // Cryptocurrency
+  "savings_account",    // E-bank/digital bank dengan bunga (BARU)
+  "foreign_currency",   // Mata uang asing (BARU)
   "other",
 ]);
 
@@ -352,17 +357,72 @@ export const goalContributions = pgTable("goal_contributions", {
    Investasi / Portofolio
 ========================= */
 
+// export const assetsMaster = pgTable("assets_master", {
+//   id: uuid("id")
+//     .primaryKey()
+//     .default(sql`gen_random_uuid()`),
+//   userId: uuid("user_id")
+//     .notNull()
+//     .references(() => users.id, { onDelete: "cascade" }),
+//   // symbol: varchar("symbol", { length: 16 }).primaryKey(),
+//   name: varchar("name", { length: 160 }).notNull(),
+//   type: assetType("type").notNull(),
+//   currencyCode: varchar("currency_code", { length: 3 })
+//     .notNull()
+//     .default("IDR"),
+//   createdAt: timestamp("created_at", { withTimezone: true })
+//     .defaultNow()
+//     .notNull(),
+//   updatedAt: timestamp("updated_at", { withTimezone: true })
+//     .defaultNow()
+//     .notNull(),
+// }, (t) => [
+//   index("assets_master_user_idx").on(t.userId),
+// ]);
+
 export const assetsMaster = pgTable("assets_master", {
-  // id: uuid("id").defaultRandom().unique(),
+  // === Identifiers ===
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  symbol: varchar("symbol", { length: 16 }).primaryKey(),
+  symbol: varchar("symbol", { length: 20 })
+    .notNull(),  // ✅ UNCOMMENT & fix: BBCA, BTC, DPAMDAI0001, etc
+
+  // === Basic Info ===
   name: varchar("name", { length: 160 }).notNull(),
   type: assetType("type").notNull(),
   currencyCode: varchar("currency_code", { length: 3 })
     .notNull()
     .default("IDR"),
+
+  // === Additional Metadata (NEW) ===
+  description: text("description"),  // Deskripsi panjang aset
+  issuer: varchar("issuer", { length: 160 }),  // Penerbit (bond/sukuk/mutual fund)
+  isin: varchar("isin", { length: 20 }),  // ISIN code (obligasi/sukuk/mutual fund)
+  source: varchar("source", { length: 50 }),  // Sumber: BNI, Binance, Equity, Pegadaian
+  note: text("note"),  // Catatan personal user
+
+  // === Type-Specific Fields (NEW) ===
+  coupon: numeric("coupon", { precision: 5, scale: 2 }),  // Coupon rate % (untuk bond)
+  interestRate: numeric("interest_rate", { precision: 5, scale: 2 }),  // Bunga % (untuk savings/fixed deposit)
+  maturityDate: date("maturity_date"),  // Tanggal jatuh tempo (bond/deposit)
+
+  // === Trading Info (NEW) ===
+  minimumUnit: numeric("minimum_unit", { precision: 28, scale: 8 })
+    .notNull()
+    .default("1"),  // Minimal unit beli (e.g., 0.00000001 untuk crypto)
+  decimals: integer("decimals")
+    .notNull()
+    .default(8),  // Jumlah desimal untuk quantity (default 8, bisa disesuaikan per aset)
+
+  // === Status (NEW) ===
+  archived: boolean("archived").notNull().default(false),  // Soft delete
+  isActive: boolean("is_active").notNull().default(true),  // Track untuk auto-price update
+
+  // === Timestamps ===
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -370,7 +430,11 @@ export const assetsMaster = pgTable("assets_master", {
     .defaultNow()
     .notNull(),
 }, (t) => [
-  index("assets_master_user_idx").on(t.userId),
+  // Indexes & Constraints
+  uniqueIndex("assets_master_user_symbol_uq").on(t.userId, t.symbol),  // Prevent duplicate per user
+  index("assets_master_user_type_idx").on(t.userId, t.type),  // Filter by type
+  index("assets_master_user_active_idx").on(t.userId, t.isActive),  // Active assets only
+  uniqueIndex("assets_master_isin_uq").on(t.isin),  // Global ISIN unique (if provided)
 ]);
 
 export const holdings = pgTable("holdings", {
@@ -378,7 +442,7 @@ export const holdings = pgTable("holdings", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  symbol: varchar("symbol", { length: 16 })
+  symbol: varchar("symbol", { length: 20 })
     .notNull()
     .references(() => assetsMaster.symbol, { onDelete: "cascade" }),
   qty: numeric("qty", { precision: 28, scale: 8 })
@@ -405,7 +469,7 @@ export const portfolioTx = pgTable("portfolio_tx", {
   // assetId: uuid("asset_id")
   //   .notNull()
   //   .references(() => assetsMaster.id, { onDelete: "cascade" }),
-  symbol: varchar("symbol", { length: 16 })
+  symbol: varchar("symbol", { length: 20 })
     .notNull()
     .references(() => assetsMaster.symbol, { onDelete: "cascade" }),
   type: portfolioTxType("type").notNull(), // BUY/SELL/DIVIDEND/INTEREST/FEE/ADJUST
@@ -437,7 +501,7 @@ export const portfolioTx = pgTable("portfolio_tx", {
 ]);
 
 export const assetPrices = pgTable("asset_prices", {
-  symbol: varchar("symbol", { length: 16 })
+  symbol: varchar("symbol", { length: 20 })
     .notNull()
     .references(() => assetsMaster.symbol, { onDelete: "cascade" }),
   day: date("date").notNull(),

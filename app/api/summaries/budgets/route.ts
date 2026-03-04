@@ -1,13 +1,13 @@
 export const runtime = "nodejs";
 
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, between, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { budgets, categories, transactions, users, userSettings } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { handleApi } from "@/lib/http";
-import { periodRange, currentPeriod } from "@/lib/utils";
+import { periodRange, currentPeriod, prevPeriod } from "@/lib/utils";
 
 export const GET = handleApi(async () => {
   const session = await getSession();
@@ -32,43 +32,81 @@ export const GET = handleApi(async () => {
   
   const startDatePeriod = Number(startDate?.startDatePeriod) || 1;
   const currPeriod = currentPeriod(startDatePeriod);
+  const prev = prevPeriod(currPeriod);
+  const { start: prevStart, end: prevEnd } = periodRange(prev, startDatePeriod);
   const { start, end } = periodRange(currPeriod, startDatePeriod);
+  
+  // ambil budget + kategori
+  const rows = await db
+    .select({
+      id: budgets.id,
+      period: budgets.periodMonth,
+      limitAmount: sql<string>`${budgets.amount}::text`,
+      carryover: budgets.carryover,
+      accumulatedCarryover: sql<string>`${budgets.accumulatedCarryover}::text`,
+      categoryId: categories.id,
+      categoryName: categories.name
+    })
+    .from(budgets)
+    .leftJoin(categories, eq(categories.id, budgets.categoryId))
+    .where(
+      and(eq(budgets.userId, userId), eq(budgets.periodMonth, currPeriod))
+    )
+    .orderBy(categories.name)
+
+  // ambil SPENT bulan lalu per kategori
+  const prevSpentRows = await db
+    .select({
+      categoryId: transactions.categoryId,
+      spent: sql<string>`SUM(${transactions.amount})::text`,
+    })
+    .from(transactions)
+    .where(and(
+      eq(transactions.userId, userId),
+      eq(transactions.type, "expense"),
+      between(transactions.occurredAt, prevStart, prevEnd)
+    ))
+    .groupBy(transactions.categoryId);
+
+  const prevSpentMap = new Map<string, number>();
+  for (const r of prevSpentRows)
+    prevSpentMap.set(r.categoryId ?? "null", Number(r.spent||0));
 
   // total pengeluaran per kategori bulan ini
   const spentRows = await db
     .select({
       categoryId: transactions.categoryId,
-      spent: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN ${transactions.amount} END), 0)::text`,
+      spent: sql<string>`SUM(${transactions.amount})::text`,
     })
     .from(transactions)
-    .where(and(eq(transactions.userId, userId), gte(transactions.occurredAt, start), lte(transactions.occurredAt, end)))
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        eq(transactions.type, "expense"),
+        between(transactions.occurredAt, start, end)
+      )
+    )
     .groupBy(transactions.categoryId);
 
   const spentMap = new Map<string, number>();
-  spentRows.forEach(r => spentMap.set(String(r.categoryId), Number(r.spent)));
-
-  // budget kategori bulan ini
-  const rows = await db
-    .select({
-      categoryId: budgets.categoryId,
-      categoryName: categories.name,
-      amount: sql<string>`${budgets.amount}::text`,
-    })
-    .from(budgets)
-    .leftJoin(categories, eq(categories.id, budgets.categoryId))
-    .where(and(eq(budgets.userId, userId), eq(budgets.periodMonth, currPeriod)))
-    .orderBy(categories.name);
+  spentRows.forEach(
+    r => spentMap.set(String(r.categoryId), Number(r.spent))
+  );
 
   const data = rows.map(r => {
-    const planned = Number(r.amount ?? 0);
+    const limit = Number(r.limitAmount || 0);
+    const accumulated = Number(r.accumulatedCarryover || 0);
     const spent = spentMap.get(String(r.categoryId)) ?? 0;
+    
+    const effectiveLimit = limit + accumulated;
+    const remaining = effectiveLimit - spent;
+    const progress = effectiveLimit > 0 ? spent / effectiveLimit : 0;
     return {
-      categoryId: r.categoryId!,
-      categoryName: r.categoryName ?? "Tanpa kategori",
-      planned,
+      ...r,
+      planned: effectiveLimit,
       spent,
-      remain: Math.max(planned - spent, 0),
-      pct: planned > 0 ? Math.min(spent / planned, 1) : 0,
+      remain: remaining,
+      pct: progress,
     };
   });
 

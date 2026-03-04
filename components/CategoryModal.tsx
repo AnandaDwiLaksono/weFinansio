@@ -49,7 +49,7 @@ import {
   Stethoscope,
   TrendingDown,
   TrendingUp,
-  Train,
+  TramFront,
   UserRound,
   UsersRound,
   Utensils,
@@ -113,7 +113,7 @@ const listIcons = [
   { label: "Car", value: "Car", icon: Car },
   { label: "Bus", value: "Bus", icon: Bus },
   { label: "Bike", value: "Bike", icon: Bike },
-  { label: "Train", value: "Train", icon: Train },
+  { label: "Tram", value: "TramFront", icon: TramFront },
   
   // People
   { label: "Heart", value: "Heart", icon: Heart },
@@ -124,7 +124,7 @@ const listIcons = [
   
   // Subscription
   { label: "Repeat", value: "Repeat", icon: Repeat },
-  { label: "Refresh CCW", value: "RefreshCcw", icon: RefreshCcw },
+  { label: "Refresh", value: "RefreshCcw", icon: RefreshCcw },
   { label: "Calendar", value: "Calendar", icon: Calendar },
   { label: "Calendar Clock", value: "CalendarClock", icon: CalendarClock },
   
