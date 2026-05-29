@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { eq, sql, asc } from "drizzle-orm";
+import { eq, sql, asc, ilike, or, and } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -11,7 +11,22 @@ import { UnauthorizedError } from "@/lib/errors";
 import { convertToBase, getFxMap, getUserBaseCurrency } from "@/lib/fx";
 
 const ListQuery = z.object({
-  q: z.string().optional(),
+  search: z.string().optional(),
+  type: z.enum([
+    "all",
+    "stock",
+    "mutual_fund",
+    "bond",
+    "government_bond",
+    "fixed_deposit",
+    "savings_account",
+    "precious_metal",
+    "foreign_currency",
+    "crypto",
+    "other",
+  ]).default("all"),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).default(20),
 });
 
 const CreateBody = z.object({
@@ -58,6 +73,7 @@ export const GET = handleApi(async (req: Request) => {
       where: eq(users.email, session.user.email),
       columns: { id: true },
     });
+
     if (u) userId = u.id;
   }
 
@@ -106,21 +122,25 @@ export const GET = handleApi(async (req: Request) => {
 
   const base = await getUserBaseCurrency(userId);
 
+  const where = [
+    eq(assetsMaster.userId, userId),
+    p.search ? or(ilike(assetsMaster.symbol, `%${p.search}%`), ilike(assetsMaster.name, `%${p.search}%`)) : undefined,
+    p.type !== "all" ? eq(assetsMaster.type, p.type) : undefined,
+  ].filter(Boolean) as Parameters<typeof and>;
+
+  const offset = (p.page - 1) * p.limit;
+
   const rows = await db
-    .select({
-      symbol: assetsMaster.symbol,
-      name: assetsMaster.name,
-      type: assetsMaster.type,
-      currency: assetsMaster.currencyCode,
-      createdAt: assetsMaster.createdAt,
-    })
+    .select()
     .from(assetsMaster)
-    .where(eq(assetsMaster.userId, userId))
-    .orderBy(asc(assetsMaster.createdAt));
+    .where(and(...where))
+    .orderBy(asc(assetsMaster.createdAt))
+    .offset(offset)
+    .limit(p.limit);
 
   const filtered = rows.filter((a) => {
-    if (!p.q) return true;
-    const q = p.q.toLowerCase();
+    if (!p.search) return true;
+    const q = p.search.toLowerCase();
     return (
       a.symbol.toLowerCase().includes(q) ||
       a.name.toLowerCase().includes(q)
@@ -128,7 +148,7 @@ export const GET = handleApi(async (req: Request) => {
   });
 
   // FX map
-  const ccys = filtered.map((a) => a.currency);
+  const ccys = filtered.map((a) => a.currencyCode);
   const fxMap = await getFxMap(userId, ccys, base);
 
   const items = filtered.map((a) => {
@@ -138,8 +158,8 @@ export const GET = handleApi(async (req: Request) => {
     const lastPrice = pos.lastPrice ?? 0;
     const rawMarketValue = quantity * lastPrice;
     const rawPnl = rawMarketValue - cost;
-    const marketValue = convertToBase(rawMarketValue, a.currency, fxMap, base);
-    const pnl = convertToBase(rawPnl, a.currency, fxMap, base);
+    const marketValue = convertToBase(rawMarketValue, a.currencyCode, fxMap, base);
+    const pnl = convertToBase(rawPnl, a.currencyCode, fxMap, base);
     const avgPrice = quantity !== 0 ? cost / quantity : 0;
     return {
       ...a,
@@ -153,10 +173,15 @@ export const GET = handleApi(async (req: Request) => {
     };
   });
 
+  const [{ totalCount }] = await db
+    .select({ totalCount: sql<number>`COUNT(*)::int` })
+    .from(assetsMaster)
+    .where(and(...where));
+
   const totalMarketValue = items.reduce((s, i) => s + i.marketValue, 0);
   const totalPnl = items.reduce((s, i) => s + i.pnl, 0);
 
-  return { baseCurrency: base, items, total: { marketValue: totalMarketValue, pnl: totalPnl } };
+  return { baseCurrency: base, items, total: { marketValue: totalMarketValue, pnl: totalPnl }, totalCount };
 });
 
 export const POST = handleApi(async (req: Request) => {

@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#2F80ED" />
         <meta name="description" content="weFinansio — catat transaksi, kelola anggaran, dan capai tujuan finansial." />
@@ -39,7 +39,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
+              (() => {
                 try {
                   var theme = localStorage.getItem('wefinansio_theme_mode');
                   if (theme === 'dark') {

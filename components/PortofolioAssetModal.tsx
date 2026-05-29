@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useApiMutation, api } from "@/lib/react-query";
@@ -35,7 +34,6 @@ type AssetType =
   | "foreign_currency"
   | "crypto"
   | "other";
-
 type NewAssetPayload = {
   symbol: string;
   name: string;
@@ -102,13 +100,31 @@ export default function PortofolioAssetModal({
   const [form, setForm] = useState(initial);
 
   const create = useApiMutation<{ id: string }, NewAssetPayload>(
-    (payload) => api.post("/api/portfolio/assets", payload),
+    (payload) => api.post("/api/portofolio/assets", payload),
     {
       onSuccess: () => {
         toast.success("Aset ditambahkan");
+
         queryClient.invalidateQueries({ queryKey: ["portfolio-assets"] });
+        
         setOpen(false);
       },
+    },
+  );
+
+  const update = useApiMutation<{ ok: boolean }, NewAssetPayload & { id: string }>(
+    ({ id, ...payload }) => api.patch(`/api/portofolio/assets/${id}`, payload),
+    {
+      onSuccess: () => {
+        toast.success("Aset diperbarui");
+
+        queryClient.invalidateQueries({ queryKey: ["portfolio-assets"] });
+        
+        setOpen(false);
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Gagal memperbarui aset");
+      }
     },
   );
 
@@ -122,6 +138,7 @@ export default function PortofolioAssetModal({
     if ((form.type === "bond" || form.type === "government_bond") && !form.coupon) {
       return toast.error("Coupon rate wajib untuk obligasi");
     }
+    
     if ((form.type === "fixed_deposit" || form.type === "savings_account") && !form.interestRate) {
       return toast.error("Interest rate wajib untuk deposito/savings");
     }
@@ -135,6 +152,7 @@ export default function PortofolioAssetModal({
       minimumUnit: form.minimumUnit || 1,
       decimals: form.decimals || 8,
     };
+
     if (form.description) payload.description = form.description;
     if (form.issuer) payload.issuer = form.issuer;
     if (form.isin) payload.isin = form.isin;
@@ -144,7 +162,11 @@ export default function PortofolioAssetModal({
     if (form.interestRate) payload.interestRate = form.interestRate;
     if (form.maturityDate) payload.maturityDate = form.maturityDate;
 
-    if (type === "add") create.mutate(payload);
+    if (type === "add") {
+      create.mutate(payload);
+    } else if (type === "edit" && id) {
+      update.mutate({ id, ...payload });
+    }
   }
 
   // Conditional rendering helpers
@@ -162,7 +184,7 @@ export default function PortofolioAssetModal({
       <DialogTrigger asChild={asChild}>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {type === "add" ? "Tambah" : "Edit"} Aset
@@ -187,6 +209,7 @@ export default function PortofolioAssetModal({
               onChange={e => setForm(
                 f => ({...f, symbol: e.target.value.toUpperCase()})
               )}
+              disabled={type === "edit"}
             />
           </div>
           <div className="w-full space-y-1">
@@ -209,6 +232,7 @@ export default function PortofolioAssetModal({
                 onValueChange={(v: AssetType) =>
                   setForm((f) => ({ ...f, type: v }))
                 }
+                disabled={type === "edit"}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Tipe aset" />
@@ -277,7 +301,7 @@ export default function PortofolioAssetModal({
                   </label>
                   <Input
                     placeholder="Contoh: ID1000123456"
-                    value={form.isin}
+                    value={form.isin || ""}
                     onChange={(e) => setForm((f) => ({ ...f, isin: e.target.value.toUpperCase() }))}
                   />
                 </div>
@@ -343,7 +367,7 @@ export default function PortofolioAssetModal({
             </label>
             <Input
               placeholder="Contoh: BNI Sekuritas, Binance, Tokocrypto..."
-              value={form.source}
+              value={form.source || ""}
               onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
             />
           </div>
@@ -354,7 +378,7 @@ export default function PortofolioAssetModal({
             </label>
             <Input
               placeholder="Deskripsi singkat aset..."
-              value={form.description}
+              value={form.description || ""}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             />
           </div>
@@ -365,7 +389,7 @@ export default function PortofolioAssetModal({
             </label>
             <Input
               placeholder="Catatan pribadi..."
-              value={form.note}
+              value={form.note || ""}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
             />
           </div>
@@ -378,7 +402,7 @@ export default function PortofolioAssetModal({
             >
               Batal
             </Button>
-            <Button type="submit" disabled={create.isPending}>
+            <Button type="submit" disabled={create.isPending || update.isPending}>
               Simpan
             </Button>
           </div>

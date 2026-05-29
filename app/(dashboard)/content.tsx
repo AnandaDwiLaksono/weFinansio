@@ -36,17 +36,6 @@ type SummaryRes = {
   }>;
 };
 
-type GoalSummary = {
-  id: string;
-  name: string;
-  target: number;
-  saved: number;
-  progress: number;
-  remaining: number;
-  targetDate?: string | null;
-  color?: string | null;
-};
-
 export default function DashboardContent() {
   const router = useRouter();
   const { status } = useSession();
@@ -216,23 +205,6 @@ function LoadingState() {
       <Skeleton className="h-24" />
       <Skeleton className="h-24" />
       <Skeleton className="h-24" />
-    </div>
-  );
-}
-
-function MiniRing({ progress, color }: { progress: number; color: string }) {
-  const pct = Math.round((progress || 0) * 100);
-  return (
-    <div className="relative h-10 w-10">
-      <div
-        className="h-10 w-10 rounded-full"
-        style={{
-          background: `conic-gradient(${color} ${pct}%, #e5e7eb ${pct}%)`,
-        }}
-      />
-      <div className="absolute inset-[6px] bg-background rounded-full grid place-items-center">
-        <span className="text-[10px] font-medium">{pct}%</span>
-      </div>
     </div>
   );
 }
