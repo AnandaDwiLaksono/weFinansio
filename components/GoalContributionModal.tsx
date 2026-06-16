@@ -175,14 +175,8 @@ export default function GoalContributionModal({
                 <span className="text-red-500">*</span>
               </label>
               <Select
-                value={form.type === "deposit" ? form.accountId : (goalLinkedAccountId ? "" : form.targetAccountId)}
-                onValueChange={(v) => setForm((f) => {
-                  if (form.type === "deposit") {
-                    return { ...f, accountId: v };
-                  } else {
-                    return { ...f, targetAccountId: v };
-                  }
-                })}
+                value={form.accountId}
+                onValueChange={(v) => setForm((f) => ({ ...f, accountId: v }))}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
@@ -216,14 +210,8 @@ export default function GoalContributionModal({
                 </div>
               ) : (
                 <Select
-                  value={form.type === "withdraw" ? form.accountId : form.targetAccountId}
-                  onValueChange={(v) => setForm((f) => {
-                    if (form.type === "withdraw") {
-                      return { ...f, accountId: v };
-                    } else {
-                      return { ...f, targetAccountId: v };
-                    }
-                  })}
+                  value={form.targetAccountId}
+                  onValueChange={(v) => setForm((f) => ({ ...f, accountId: v }))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pilih akun goal" />
