@@ -175,6 +175,7 @@ export default function GoalContributionModal({
                 <span className="text-red-500">*</span>
               </label>
               <Select
+                // value={goalLinkedAccountId && form.type === "withdraw" ? "" : form.accountId}
                 value={form.accountId}
                 onValueChange={(v) => setForm((f) => ({ ...f, accountId: v }))}
               >
