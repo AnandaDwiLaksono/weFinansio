@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pencil, Trash2, Plus, Search, Copy } from "lucide-react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -115,12 +115,6 @@ export default function BudgetsContent() {
     almostOver: 0,
     overBudget: 0
   };
-
-  useEffect(() => {
-    setPeriod(currentPeriod(startDate));
-    setSearch("");
-    setPage(1);
-  }, [startDate]);
 
   return (
     <div className="space-y-4">
