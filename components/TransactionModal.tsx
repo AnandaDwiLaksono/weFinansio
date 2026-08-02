@@ -202,6 +202,7 @@ export default function TransactionModal({
     });
 
     return opts;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.type, form.accountId, form.transferToAccountId, linkedFrom?.items, linkedTo?.items]);
 
   // Auto-select first goal option when available

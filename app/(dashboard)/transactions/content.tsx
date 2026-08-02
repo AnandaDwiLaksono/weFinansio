@@ -84,8 +84,8 @@ export default function TransactionsContent() {
 
   const { data } = useApiQuery<ListRes>(
     queryKey,
-    () =>
-      api.get(`/api/transactions?` + new URLSearchParams({
+    () => {
+      const params = new URLSearchParams({
         search,
         type,
         accountId,
@@ -95,8 +95,11 @@ export default function TransactionsContent() {
         sort,
         page: String(page),
         limit: String(limit),
-      })),
-      { staleTime: 10_000 }
+      });
+      
+      return api.get(`/api/transactions?` + params.toString());
+    },
+    { staleTime: 10_000 }
   );
 
   // sync URL
@@ -132,7 +135,7 @@ export default function TransactionsContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">
             Kelola transaksi harianmu
@@ -212,7 +215,9 @@ export default function TransactionsContent() {
               </Select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Akun</label>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Akun
+              </label>
               <Select
                 value={accountId}
                 onValueChange={(value) => { setAccount(value); setPage(1); }}

@@ -1,18 +1,18 @@
-export const runtime = "nodejs";
+export const runtime = "nodejs"
 
-import { eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm"
 
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"
 import {
   assetsMaster as assets,
   holdings,
   assetPrices as prices,
   portfolioTx as ptx,
   users,
-} from "@/lib/db/schema";
-import { getSession } from "@/lib/auth";
-import { UnauthorizedError } from "@/lib/errors";
-import { handleApi } from "@/lib/http";
+} from "@/lib/db/schema"
+import { getSession } from "@/lib/auth"
+import { UnauthorizedError } from "@/lib/errors"
+import { handleApi } from "@/lib/http"
 
 // helper: ambil harga terakhir per asset (Postgres)
 const latestPriceSub = sql`
@@ -22,30 +22,30 @@ const latestPriceSub = sql`
     as_of
   FROM ${prices}
   ORDER BY asset_id, as_of DESC
-`;
+`
 
 type Row = {
-  assetId: string;
-  symbol: string;
-  name: string | null;
-  qty: string;         // numeric text
-  avgPrice: string | null;
-  lastPrice: string | null;
-};
+  assetId: string
+  symbol: string
+  name: string | null
+  qty: string         // numeric text
+  avgPrice: string | null
+  lastPrice: string | null
+}
 
 export const GET = handleApi(async () => {
-  const session = await getSession();
-  let userId = session?.user?.id;
+  const session = await getSession()
+  let userId = session?.user?.id
   // fallback by email (jaga-jaga)
   if (!userId && session?.user?.email) {
     const u = await db.query.users.findFirst({
       where: eq(users.email, session.user.email),
       columns: { id: true },
-    });
-    if (u) userId = u.id;
+    })
+    if (u) userId = u.id
   }
 
-  if (!userId) throw new UnauthorizedError("No user");
+  if (!userId) throw new UnauthorizedError("No user")
 
   // ====== Ambil holdings + harga terakhir
   const rows = await db.execute<Row>(sql`
@@ -61,15 +61,15 @@ export const GET = handleApi(async () => {
     LEFT JOIN (${latestPriceSub}) lp ON lp.asset_id = h.asset_id
     WHERE h.user_id = ${userId}
     ORDER BY a.symbol
-  `);
+  `)
 
   // ====== Jika avg_price kosong, fallback hitung dari transaksi tertimbang
   // (buy => +qty & +cost, sell => -qty & -cost proporsional)
-  const needFallback = rows.rows.filter(r => !r.avgPrice);
+  const needFallback = rows.rows.filter(r => !r.avgPrice)
   if (needFallback.length) {
-    const ids = needFallback.map(r => r.assetId);
+    const ids = needFallback.map(r => r.assetId)
     if (ids.length) {
-      type TxAgg = { assetId: string; qty: string; cost: string };
+      type TxAgg = { assetId: string; qty: string; cost: string }
       const agg = await db.execute<TxAgg>(sql`
         SELECT
           t.asset_id AS "assetId",
@@ -87,31 +87,31 @@ export const GET = handleApi(async () => {
         FROM ${ptx} t
         WHERE t.user_id = ${userId} AND t.asset_id = ANY(${ids})
         GROUP BY t.asset_id
-      `);
-      const map = new Map(agg.rows.map(a => [a.assetId, a]));
+      `)
+      const map = new Map(agg.rows.map(a => [a.assetId, a]))
       rows.rows.forEach(r => {
         if (!r.avgPrice) {
-          const a = map.get(r.assetId);
+          const a = map.get(r.assetId)
           if (a && Number(a.qty) !== 0) {
-            const avg = Number(a.cost) / Number(a.qty);
-            r.avgPrice = String(avg);
+            const avg = Number(a.cost) / Number(a.qty)
+            r.avgPrice = String(avg)
           } else {
-            r.avgPrice = "0";
+            r.avgPrice = "0"
           }
         }
-      });
+      })
     }
   }
 
   // ====== Hitung total & per-asset
   const items = rows.rows.map(r => {
-    const qty = Number(r.qty || 0);
-    const last = Number(r.lastPrice || 0);
-    const avg  = Number(r.avgPrice || 0);
-    const value = qty * last;
-    const cost  = qty * avg;
-    const pl = value - cost;
-    const plPct = cost > 0 ? pl / cost : 0;
+    const qty = Number(r.qty || 0)
+    const last = Number(r.lastPrice || 0)
+    const avg  = Number(r.avgPrice || 0)
+    const value = qty * last
+    const cost  = qty * avg
+    const pl = value - cost
+    const plPct = cost > 0 ? pl / cost : 0
     return {
       assetId: r.assetId,
       symbol: r.symbol,
@@ -123,16 +123,16 @@ export const GET = handleApi(async () => {
       cost,
       pl,
       plPct,
-    };
-  });
+    }
+  })
 
-  const totalValue = items.reduce((s, x) => s + x.value, 0);
-  const totalCost  = items.reduce((s, x) => s + x.cost, 0);
-  const totalPL    = totalValue - totalCost;
-  const totalPLPct = totalCost > 0 ? totalPL / totalCost : 0;
+  const totalValue = items.reduce((s, x) => s + x.value, 0)
+  const totalCost  = items.reduce((s, x) => s + x.cost, 0)
+  const totalPL    = totalValue - totalCost
+  const totalPLPct = totalCost > 0 ? totalPL / totalCost : 0
 
   // urutkan top by value
-  items.sort((a, b) => b.value - a.value);
+  items.sort((a, b) => b.value - a.value)
 
   return {
     totalValue,
@@ -140,5 +140,5 @@ export const GET = handleApi(async () => {
     totalPL,
     totalPLPct,
     top: items.slice(0, 6),
-  };
-});
+  }
+})

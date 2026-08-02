@@ -136,6 +136,7 @@ export default function BudgetsContent() {
             </BudgetModal>
           </div>
         </div>
+
         {/* KPI cards */}
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
@@ -197,7 +198,9 @@ export default function BudgetsContent() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Periode Budget</label>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Periode Budget
+              </label>
               <Input
                 type="month"
                 value={period}

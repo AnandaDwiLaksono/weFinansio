@@ -1,51 +1,66 @@
-export const runtime = "nodejs";
+export const runtime = "nodejs"
 
-import { and, between, eq, sql } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "@/lib/db";
-import { transactions, categories } from "@/lib/db/schema";
-import { getSession } from "@/lib/auth";
-import { handleApi } from "@/lib/http";
-import { UnauthorizedError } from "@/lib/errors";
+import { and, between, eq, sql } from "drizzle-orm"
+import { z } from "zod"
+
+import { db } from "@/lib/db"
+import { transactions, categories, users, userSettings } from "@/lib/db/schema"
+import { getSession } from "@/lib/auth"
+import { handleApi } from "@/lib/http"
+import { UnauthorizedError } from "@/lib/errors"
+import { periodRange } from "@/lib/utils"
 
 const Q = z.object({
-  period: z.string().regex(/^\d{4}-\d{2}$/),
-  type: z.enum(["income", "expense"]),
-});
-
-function monthRange(period: string) {
-  const [y, m] = period.split("-").map(Number);
-  const start = new Date(y, m - 1, 1).toISOString().split("T")[0];
-  const end = new Date(y, m, 0).toISOString().split("T")[0];
-  return { start, end };
-}
+  period: z.string().regex(/^\d{4}-\d{2}$/).nonempty(),
+  type: z.enum(["income", "expense"]).default("expense"),
+  accountId: z.string().default("all"),
+})
 
 export const GET = handleApi(async (req: Request) => {
-  const session = await getSession();
-  const userId = session?.user?.id;
-  if (!userId) throw new UnauthorizedError();
-
-  const p = Q.parse(Object.fromEntries(new URL(req.url).searchParams));
-  const { start, end } = monthRange(p.period);
-
-  const rows = await db
-    .select({
-      categoryId: categories.id,
-      categoryName: categories.name,
-      categoryColor: categories.color,
-      categoryIcon: categories.icon,
-      total: sql<string>`SUM(${transactions.amount})::text`,
+  const session = await getSession()
+  let userId = session?.user?.id
+  // fallback by email (jaga-jaga)
+  if (!userId && session?.user?.email) {
+    const u = await db.query.users.findFirst({
+      where: eq(users.email, session.user.email),
+      columns: { id: true },
     })
+
+    if (u) userId = u.id
+  }
+
+  if (!userId) throw new UnauthorizedError("No user")
+
+  const url = new URL(req.url)
+  const p = Q.parse(Object.fromEntries(url.searchParams))
+    
+  // Get start date of the period
+  const startDate = await db.query.userSettings.findFirst({
+    where: eq(userSettings.userId, userId),
+    columns: { startDatePeriod: true }
+  })
+
+  const startDatePeriod = Number(startDate?.startDatePeriod) || 1
+  const { start, end } = periodRange(p.period, startDatePeriod)
+
+  const filters = [
+    eq(transactions.userId, userId),
+    between(transactions.occurredAt, start, end),
+    eq(transactions.type, p.type),
+    p.accountId && p.accountId !== "all" ? eq(transactions.accountId, p.accountId) : undefined,
+  ].filter(Boolean)
+
+  const rows = await db.select({
+    categoryId: categories.id,
+    categoryName: categories.name,
+    categoryColor: categories.color,
+    categoryIcon: categories.icon,
+    total: sql<string>`SUM(${transactions.amount})::text`,
+  })
     .from(transactions)
     .leftJoin(categories, eq(categories.id, transactions.categoryId))
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        eq(transactions.type, p.type),
-        between(transactions.occurredAt, start, end)
-      )
-    )
-    .groupBy(categories.id, categories.name, categories.color, categories.icon);
+    .where(and(...filters))
+    .groupBy(categories.id, categories.name, categories.color, categories.icon)
 
   const items = rows
     .map((r) => ({
@@ -56,9 +71,9 @@ export const GET = handleApi(async (req: Request) => {
       total: Number(r.total || 0),
     }))
     .filter((x) => x.total !== 0)
-    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
-  const totalAbs = items.reduce((s, i) => s + Math.abs(i.total), 0);
-
-  return { period: p.period, type: p.type, items, totalAbs };
-});
+  const totalAbs = items.reduce((s, i) => s + Math.abs(i.total), 0)
+  
+  return { period: p.period, type: p.type, items, totalAbs }
+})

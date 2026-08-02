@@ -97,9 +97,9 @@ export default function CategoriesContent() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold mb-4 text-foreground w-fit">
+          <h1 className="text-xl font-semibold text-foreground w-fit">
             Kelola kategori pemasukan & pengeluaran
           </h1>
           <Card className="px-4 py-2.5 bg-secondary rounded-xl flex flex-col gap-1 shadow-lg">

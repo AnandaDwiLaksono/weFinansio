@@ -30,6 +30,8 @@ export function handleApi<TReq = Request, TRes = unknown>(
   return async (req: TReq) => {
     try {
       const data = await fn(req);
+      // Bypass jsonOk if data is already a Response (e.g., CSV export)
+      if (data instanceof Response) return data;
       return jsonOk(data as TRes);
     } catch (err) {
       return jsonError(err);

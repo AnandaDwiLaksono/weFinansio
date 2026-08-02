@@ -103,9 +103,9 @@ export default function AccountsContent() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-4 items-center">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-medium mb-4 text-foreground">
+          <h1 className="text-xl font-medium text-foreground">
             Kelola sumber dana dan rekeningmu
           </h1>
           <Card className="px-4 py-2.5 bg-secondary rounded-xl flex flex-col gap-1 shadow-lg">
