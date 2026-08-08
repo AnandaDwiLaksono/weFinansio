@@ -82,28 +82,3 @@ export default function PortfolioPanel() {
 }
 
 function sign(x: number) { return x >= 0 ? "+" : "-" }
-
-function SkeletonPanel() {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Portfolio</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm text-muted-foreground">
-        Memuat…
-      </CardContent>
-    </Card>
-  )
-}
-function ErrorPanel() {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Portfolio</CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm text-red-500">
-        Gagal memuat portfolio.
-      </CardContent>
-    </Card>
-  )
-}

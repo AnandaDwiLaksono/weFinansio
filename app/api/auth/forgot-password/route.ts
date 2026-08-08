@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { eq, and, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { Resend } from "resend";
+
 import { db } from "@/lib/db";
 import { users, passwordResetTokens } from "@/lib/db/schema";
 import { handleApi } from "@/lib/http";
@@ -11,7 +12,7 @@ import { NotFoundError } from "@/lib/errors";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const Body = z.object({
-  email: z.string().email("Email tidak valid"),
+  email: z.email("Email tidak valid"),
 });
 
 export const POST = handleApi(async (req: Request) => {
@@ -53,7 +54,7 @@ export const POST = handleApi(async (req: Request) => {
   // Kirim email dengan Resend
   try {
     await resend.emails.send({
-      from: 'weFinansio <noreply@wefinansio.com>', // Ganti dengan domain verified Anda
+      from: 'weFinansio <noreply@wefinansio.zozoadl.com>', // Ganti dengan domain verified Anda
       to: user.email,
       subject: 'Reset Password - weFinansio',
       html: `

@@ -8,12 +8,12 @@ import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 const Schema = z.object({
   password: z.string().min(8, "Minimal 8 karakter").max(128),
@@ -28,6 +28,7 @@ type FormValues = z.infer<typeof Schema>;
 export default function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

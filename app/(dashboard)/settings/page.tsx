@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { CalendarDays } from "lucide-react";
 
 import { useApiQuery, useApiMutation, api } from "@/lib/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarDays } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type SettingsReq = {
@@ -117,6 +117,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!data) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBaseCurrency(data.settings.baseCurrency);
     setPeriodStartDay(data.settings.startDatePeriod);
     setOfflineMode(data.settings.offlineMode);

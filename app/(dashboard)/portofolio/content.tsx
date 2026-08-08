@@ -440,7 +440,7 @@ export default function PortfolioContent() {
                 {assets.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       className="p-6 text-sm text-muted-foreground text-center"
                     >
                       {search || type !== "all"

@@ -316,7 +316,7 @@ export default function CategoriesContent() {
                 {items.length===0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={8}
                       className="p-6 text-sm text-muted-foreground text-center"
                     >
                       Tidak ada data.

@@ -8,12 +8,13 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
+import { ChartLine, Eye, EyeOff, Receipt, Target } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChartLine, Eye, EyeOff, Receipt, Target } from "lucide-react";
 
 const Schema = z.object({
   email: z.email("Email tidak valid"),
@@ -23,6 +24,8 @@ const Schema = z.object({
 type FormValues = z.infer<typeof Schema>;
 
 export default function SignInPage() {
+  const router = useRouter();
+  
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -51,7 +54,8 @@ export default function SignInPage() {
 
     toast.success("Berhasil masuk");
 
-    window.location.href = res?.url || "/";
+    // window.location.href = res?.url || "/";
+    router.push(res?.url || "/");
   };
 
   return (

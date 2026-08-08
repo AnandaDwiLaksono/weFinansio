@@ -7,12 +7,12 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowLeft, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail } from "lucide-react";
 
 const Schema = z.object({
   email: z.email("Email tidak valid"),

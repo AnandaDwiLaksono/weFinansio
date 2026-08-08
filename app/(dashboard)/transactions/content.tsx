@@ -433,7 +433,7 @@ export default function TransactionsContent() {
               {items.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={8}
                     className="p-6 text-center text-sm text-muted-foreground"
                   >
                     Tidak ada data.
