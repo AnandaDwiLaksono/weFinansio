@@ -60,6 +60,10 @@ type Res = {
 export default function BudgetsContent() {
   const queryClient = useQueryClient();
 
+  const [period, setPeriod] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
   const { data: user } = useApiQuery<{
     settings: { startDatePeriod: number }
   }>(
@@ -69,11 +73,6 @@ export default function BudgetsContent() {
   );
 
   const startDate = Number(user?.settings.startDatePeriod ?? 1);
-
-  const [period, setPeriod] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  
   const selectedPeriod = period ?? currentPeriod(startDate);
   const limit = 20;
 
