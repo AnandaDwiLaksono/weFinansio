@@ -1,8 +1,10 @@
 <div align="center">
 
-# 💳 weFinansio
+  <img src="./public/icons/wefinansio_icon_vector.svg" alt="weFinansio Logo" width="72" height="72" />
 
-**Aplikasi Manajemen Keuangan Pribadi Modern & Offline-First**
+  # weFinansio
+
+  **Aplikasi Manajemen Keuangan Pribadi Modern & Offline-First**
 
 [Live Demo](https://wefinansio.zozoadl.com) • [Fitur](#-fitur-utama) • [Tech Stack](#-tech-stack) • [Cara Install](#-memulai)
 
