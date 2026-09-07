@@ -70,20 +70,26 @@ export default function BudgetsContent() {
 
   const startDate = Number(user?.settings.startDatePeriod ?? 1);
 
-  const [period, setPeriod] = useState(currentPeriod(startDate));
+  const [period, setPeriod] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-
+  
+  const selectedPeriod = period ?? currentPeriod(startDate);
   const limit = 20;
 
   const { data } = useApiQuery<Res>(
-    ["budgets", { period, search, page, limit }],
+    ["budgets", { period: selectedPeriod, search, page, limit }],
     () => {
-      const params = new URLSearchParams({ period, search, page: String(page), limit: String(limit) });
+      const params = new URLSearchParams({
+        period: selectedPeriod,
+        search,
+        page: String(page),
+        limit: String(limit)
+      });
 
       return api.get("/api/budgets?" + params.toString());
     },
-    { placeholderData: keepPreviousData }
+    { placeholderData: keepPreviousData, enabled: !!user }
   );
 
   const del = useApiMutation<{ ok: true }, { id: string }>(
@@ -176,7 +182,7 @@ export default function BudgetsContent() {
               className="cursor-pointer"
               onClick={() => {
                 setSearch("");
-                setPeriod(currentPeriod(startDate));
+                setPeriod(null);
               }}
             >
               Reset
@@ -203,7 +209,7 @@ export default function BudgetsContent() {
               </label>
               <Input
                 type="month"
-                value={period}
+                value={selectedPeriod}
                 onChange={(e) => setPeriod(e.target.value)}
               />
             </div>
@@ -212,7 +218,7 @@ export default function BudgetsContent() {
               <Button
                 variant="outline"
                 className="cursor-pointer"
-                onClick={() => copyLast.mutate({ period })}
+                onClick={() => copyLast.mutate({ period: selectedPeriod })}
               >
                 <Copy className="h-4 w-4 mr-2" /> Copy
               </Button>
@@ -315,7 +321,7 @@ export default function BudgetsContent() {
                             id={a.id}
                             startDate={startDate}
                             initial={{
-                              period: period,
+                              period: selectedPeriod,
                               categoryId: a.categoryId,
                               limitAmount: a.limitAmount,
                               carryover: a.carryover,
@@ -466,7 +472,7 @@ export default function BudgetsContent() {
                     id={a.id}
                     startDate={startDate}
                     initial={{
-                      period: period,
+                      period: selectedPeriod,
                       categoryId: a.categoryId,
                       limitAmount: a.limitAmount,
                       carryover: a.carryover,
