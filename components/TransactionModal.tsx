@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -36,9 +36,16 @@ type TransactionResponse = {
     notes: string | null;
   }[];
 };
-type LinkedGoalsResponse = { items: { id: string; name: string; color: string | null }[] };
+type LinkedGoalsResponse = {
+  items: { id: string; name: string; color: string | null }[];
+};
 type GoalContributionsResponse = {
-  items: { id: string; goalId: string; transactionId: string; amount: string }[]
+  items: {
+    id: string;
+    goalId: string;
+    transactionId: string;
+    amount: string;
+  }[];
 };
 
 export default function TransactionModal({
@@ -75,6 +82,7 @@ export default function TransactionModal({
   };
 }) {
   const queryClient = useQueryClient();
+  const clientIdRef = useRef<{ fingerprint: string; id: string } | null>(null);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initial);
@@ -85,89 +93,111 @@ export default function TransactionModal({
   const { data: trxData, isLoading } = useApiQuery<TransactionResponse>(
     ["transaction", id],
     () => api.get(`/api/transactions?page=1&limit=100`),
-    { enabled: open && type === "edit" && !!id }
+    { enabled: open && type === "edit" && !!id },
   );
 
   // Linked goals for source/destination accounts
   const { data: linkedFrom } = useApiQuery<LinkedGoalsResponse>(
     ["linked-goals", form.accountId],
     () => api.get(`/api/accounts/${form.accountId}/linked-goals`),
-    { enabled: open && !!form.accountId }
+    { enabled: open && !!form.accountId },
   );
 
   const { data: linkedTo } = useApiQuery<LinkedGoalsResponse>(
     ["linked-goals", form.transferToAccountId],
     () => api.get(`/api/accounts/${form.transferToAccountId}/linked-goals`),
-    { enabled: open && form.type === "transfer" && !!form.transferToAccountId }
+    { enabled: open && form.type === "transfer" && !!form.transferToAccountId },
   );
 
   // Fetch goal contributions when editing
   const { data: goalContributions } = useApiQuery<GoalContributionsResponse>(
     ["goal-contributions", id],
     () => api.get(`/api/goals/${id}/contributions`),
-    { enabled: open && type === "edit" && !!id }
+    { enabled: open && type === "edit" && !!id },
   );
 
   // Populate goal contribution state when editing
   useEffect(() => {
     if (!open || type !== "edit") return; // Only run when modal is open and in edit mode
-    
+
     if (goalContributions?.items && goalContributions.items.length > 0 && id) {
-      const contrib = Array.isArray(goalContributions.items) 
-        ? goalContributions.items[0] 
+      const contrib = Array.isArray(goalContributions.items)
+        ? goalContributions.items[0]
         : goalContributions.items;
-      
+
       setAsGoalContribution(true);
-      const viaAccount = form.type !== "transfer" 
-        ? form.accountId
-        : (goalContributions.items[0].amount.startsWith("-") ? form.accountId : form.transferToAccountId);
+      const viaAccount =
+        form.type !== "transfer"
+          ? form.accountId
+          : goalContributions.items[0].amount.startsWith("-")
+            ? form.accountId
+            : form.transferToAccountId;
       setSelectedGoalOption(`${contrib.goalId}|${viaAccount}`);
     } else if (goalContributions?.items) {
       // Data loaded but no goal contribution found
       setAsGoalContribution(false);
     }
-  }, [open, goalContributions, form.type, form.accountId, form.transferToAccountId, id, type]);
+  }, [
+    open,
+    goalContributions,
+    form.type,
+    form.accountId,
+    form.transferToAccountId,
+    id,
+    type,
+  ]);
 
   // Create mutation
-  const create = useApiMutation<{ id: string }, {
-    occurredAt: string;
-    amount: number;
-    type: "expense" | "income" | "transfer";
-    accountId: string;
-    transferToAccountId?: string | null;
-    categoryId?: string | null;
-    notes?: string | null;
-  }>((payload) => api.post("/api/transactions", payload));
+  const create = useApiMutation<
+    { id: string },
+    {
+      occurredAt: string;
+      amount: number;
+      type: "expense" | "income" | "transfer";
+      accountId: string;
+      transferToAccountId?: string | null;
+      categoryId?: string | null;
+      notes?: string | null;
+      clientId: string;
+    }
+  >((payload) => api.post("/api/transactions", payload));
 
-  const createGoalContribution = useApiMutation<{ ok: true }, {
-    goalId: string;
-    type: "deposit" | "withdraw";
-    amount: number;
-    occurredAt: string;
-    note?: string;
-    accountId: string;
-    targetAccountId?: string;
-    transactionId?: string; // Optional transaction ID from TransactionModal
-  }>(
-    ({ goalId, ...rest }) => api.post(`/api/goals/${goalId}/entries`, rest),
-    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }) }
-  );
+  const createGoalContribution = useApiMutation<
+    { ok: true },
+    {
+      goalId: string;
+      type: "deposit" | "withdraw";
+      amount: number;
+      occurredAt: string;
+      note?: string;
+      accountId: string;
+      targetAccountId?: string;
+      transactionId?: string; // Optional transaction ID from TransactionModal
+    }
+  >(({ goalId, ...rest }) => api.post(`/api/goals/${goalId}/entries`, rest), {
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
+  });
 
   // Update mutation
-  const patch = useApiMutation<{ ok: true }, {
-    occurredAt?: string;
-    amount?: number;
-    notes?: string | null;
-  }>((payload) => api.patch(`/api/transactions/${id}`, payload));
-  
-  const patchGoalContribution = useApiMutation<{ ok: true }, {
-    occurredAt?: string;
-    amount?: number;
-    notes?: string | null;
-  }>(
-    (payload) => api.patch(`/api/goals/${id}/contributions`, payload),
-    { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }) }
-  );
+  const patch = useApiMutation<
+    { ok: true },
+    {
+      occurredAt?: string;
+      amount?: number;
+      notes?: string | null;
+    }
+  >((payload) => api.patch(`/api/transactions/${id}`, payload));
+
+  const patchGoalContribution = useApiMutation<
+    { ok: true },
+    {
+      occurredAt?: string;
+      amount?: number;
+      notes?: string | null;
+    }
+  >((payload) => api.patch(`/api/goals/${id}/contributions`, payload), {
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["goals"] }),
+  });
 
   // Load transaction data when editing
   useEffect(() => {
@@ -191,25 +221,43 @@ export default function TransactionModal({
 
   // Build goal options based on selected accounts
   const goalOptions = useMemo(() => {
-    const opts: { goalId: string; goalName: string; viaAccountId: string }[] = [];
+    const opts: { goalId: string; goalName: string; viaAccountId: string }[] =
+      [];
 
     linkedFrom?.items.forEach((g) => {
-      opts.push({ goalId: g.id, goalName: g.name, viaAccountId: form.accountId });
+      opts.push({
+        goalId: g.id,
+        goalName: g.name,
+        viaAccountId: form.accountId,
+      });
     });
 
     linkedTo?.items.forEach((g) => {
-      opts.push({ goalId: g.id, goalName: g.name, viaAccountId: form.transferToAccountId });
+      opts.push({
+        goalId: g.id,
+        goalName: g.name,
+        viaAccountId: form.transferToAccountId,
+      });
     });
 
     return opts;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.type, form.accountId, form.transferToAccountId, linkedFrom?.items, linkedTo?.items]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    form.type,
+    form.accountId,
+    form.transferToAccountId,
+    linkedFrom?.items,
+    linkedTo?.items,
+  ]);
 
   // Auto-select first goal option when available
   useEffect(() => {
     if (type === "add" && goalOptions.length > 0 && !asGoalContribution) {
       // Only auto-select for add mode when goal contribution is not checked
-      setSelectedGoalOption((prev) => prev || `${goalOptions[0].goalId}|${goalOptions[0].viaAccountId}`);
+      setSelectedGoalOption(
+        (prev) =>
+          prev || `${goalOptions[0].goalId}|${goalOptions[0].viaAccountId}`,
+      );
     } else if (goalOptions.length === 0) {
       setSelectedGoalOption("");
       if (type === "add") setAsGoalContribution(false);
@@ -245,10 +293,18 @@ export default function TransactionModal({
         amount: Number(form.amount),
         type: form.type as "expense" | "income" | "transfer",
         accountId: form.accountId,
-        transferToAccountId: form.type === "transfer" ? form.transferToAccountId : null,
+        transferToAccountId:
+          form.type === "transfer" ? form.transferToAccountId : null,
         categoryId: form.categoryId || null,
         notes: form.note || null,
       };
+      const fingerprint = JSON.stringify(payload);
+      const clientId =
+        clientIdRef.current?.fingerprint === fingerprint
+          ? clientIdRef.current.id
+          : crypto.randomUUID();
+      clientIdRef.current = { fingerprint, id: clientId };
+      const payloadWithClientId = { ...payload, clientId };
 
       const shouldCreateGoalContribution =
         type === "add" &&
@@ -294,9 +350,10 @@ export default function TransactionModal({
         });
       };
 
-      create.mutate(payload, {
+      create.mutate(payloadWithClientId, {
         onSuccess: async (response) => {
           await createContribution(response.id);
+          clientIdRef.current = null;
 
           toast.success("Transaksi ditambahkan");
 
@@ -306,7 +363,7 @@ export default function TransactionModal({
           queryClient.invalidateQueries({ queryKey: ["trend30d"] });
           queryClient.invalidateQueries({ queryKey: ["budget-summary"] });
           queryClient.invalidateQueries({ queryKey: ["goals-summary"] });
-          
+
           setOpen(false);
         },
       });
@@ -346,7 +403,10 @@ export default function TransactionModal({
   };
 
   // Filter categories based on transaction type
-  const filteredCategories = form.type === "transfer" ? [] : categories.filter((c) => c.kind === form.type);
+  const filteredCategories =
+    form.type === "transfer"
+      ? []
+      : categories.filter((c) => c.kind === form.type);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -357,7 +417,9 @@ export default function TransactionModal({
             {type === "add" ? "Tambah" : "Edit"} Transaksi
           </DialogTitle>
           <DialogDescription className="hidden sm:block">
-            {type === "add" ? "Catat pemasukan, pengeluaran, atau transfer antar akun." : "Perbarui detail transaksi yang sudah dicatat."}
+            {type === "add"
+              ? "Catat pemasukan, pengeluaran, atau transfer antar akun."
+              : "Perbarui detail transaksi yang sudah dicatat."}
           </DialogDescription>
         </DialogHeader>
 
@@ -414,7 +476,9 @@ export default function TransactionModal({
                 </label>
                 <Select
                   value={form.accountId}
-                  onValueChange={(v) => setForm((f) => ({ ...f, accountId: v }))}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, accountId: v }))
+                  }
                   required
                   disabled={type === "edit"}
                 >
@@ -425,10 +489,10 @@ export default function TransactionModal({
                     {accounts
                       .filter((a) => a.id !== form.transferToAccountId)
                       .map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
-                      </SelectItem>
-                    ))}
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -524,11 +588,14 @@ export default function TransactionModal({
                       <SelectContent>
                         {goalOptions.map((g) => {
                           // const direction = g.viaAccountId === form.transferToAccountId ? "Masuk ke goal" : "Keluar dari goal";
-                          const direction = form.type === "transfer"
-                            ? (g.viaAccountId === form.transferToAccountId ? "Deposit" : "Withdraw")
-                            : form.type === "income"
-                              ? "Deposit"
-                              : "Withdraw";
+                          const direction =
+                            form.type === "transfer"
+                              ? g.viaAccountId === form.transferToAccountId
+                                ? "Deposit"
+                                : "Withdraw"
+                              : form.type === "income"
+                                ? "Deposit"
+                                : "Withdraw";
                           return (
                             <SelectItem
                               key={`${g.goalId}-${g.viaAccountId}`}
@@ -556,10 +623,16 @@ export default function TransactionModal({
                 </span>
                 <Input
                   placeholder="0"
-                  value={form.amount ? new Intl.NumberFormat('id-ID').format(Number(form.amount)) : '0'}
+                  value={
+                    form.amount
+                      ? new Intl.NumberFormat("id-ID").format(
+                          Number(form.amount),
+                        )
+                      : "0"
+                  }
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
-                    setForm(f => ({...f, amount: value ? value : '0'}));
+                    const value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+                    setForm((f) => ({ ...f, amount: value ? value : "0" }));
                   }}
                   className="pl-8"
                   required
@@ -573,7 +646,9 @@ export default function TransactionModal({
               <Input
                 placeholder="Opsional"
                 value={form.note}
-                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, note: e.target.value }))
+                }
               />
             </div>
 

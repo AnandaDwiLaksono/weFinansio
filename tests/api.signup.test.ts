@@ -1,15 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-// Mock db & schema minimal
+// Mock database methods, while retaining the real Drizzle columns used by eq().
 vi.mock("@/lib/db", () => {
   return {
     db: {
       select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) }) }) }),
-      insert: vi.fn().mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: "u1", email: "a@a.com", name: "A" }]) }) })
+      insert: vi.fn().mockReturnValue({ values: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: "u1", email: "a@a.com", name: "Ananda" }]) }) })
     }
   };
 });
-vi.mock("@/lib/db/schema", () => ({ users: {} }));
 
 import { POST } from "@/app/api/auth/signup/route";
 
@@ -29,7 +28,7 @@ function req(body: SignupBody) {
 
 describe("POST /api/auth/signup", () => {
   it("creates new user", async () => {
-    const res = await POST(req({ name: "A", email: "a@a.com", password: "password123" }));
+    const res = await POST(req({ name: "Ananda", email: "a@a.com", password: "password123" }));
     expect(res.status).toBe(201);
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -37,7 +36,7 @@ describe("POST /api/auth/signup", () => {
   });
 
   it("rejects invalid email", async () => {
-    const res = await POST(req({ name: "A", email: "invalid", password: "password123" }));
+    const res = await POST(req({ name: "Ananda", email: "invalid", password: "password123" }));
     expect(res.status).toBe(400);
   });
 });

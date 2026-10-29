@@ -409,6 +409,7 @@ export default function TransactionsContent() {
                               await deleteGoalContribution.mutateAsync({ id: t.id });
 
                               queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                              queryClient.invalidateQueries({ queryKey: ["accounts"] });
 
                               toast.success("Transaksi dihapus");
                             }

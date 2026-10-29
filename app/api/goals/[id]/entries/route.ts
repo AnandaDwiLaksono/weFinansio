@@ -4,10 +4,20 @@ import { and, eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { goals, goalContributions, users, accounts, transactions } from "@/lib/db/schema";
+import {
+  goals,
+  goalContributions,
+  users,
+  accounts,
+  transactions,
+} from "@/lib/db/schema";
 import { getSession } from "@/lib/auth";
 import { handleApi } from "@/lib/http";
-import { BadRequestError, NotFoundError, UnauthorizedError } from "@/lib/errors";
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from "@/lib/errors";
 
 const CreateBody = z.object({
   type: z.enum(["deposit", "withdraw"]).default("deposit"),
@@ -34,11 +44,11 @@ export const GET = handleApi(async (req: Request) => {
 
   if (!userId) throw new UnauthorizedError("No user");
 
-  const id = req.url.split('/').slice(-2)[0];
+  const id = req.url.split("/").slice(-2)[0];
 
   const own = await db.query.goals.findFirst({
     where: and(eq(goals.id, id), eq(goals.userId, userId)),
-    columns: { id:true }
+    columns: { id: true },
   });
   if (!own) throw new NotFoundError("Goal tidak ditemukan.");
 
@@ -50,7 +60,12 @@ export const GET = handleApi(async (req: Request) => {
       note: goalContributions.note,
     })
     .from(goalContributions)
-    .where(and(eq(goalContributions.userId, userId), eq(goalContributions.goalId, id)))
+    .where(
+      and(
+        eq(goalContributions.userId, userId),
+        eq(goalContributions.goalId, id),
+      ),
+    )
     .orderBy(desc(goalContributions.occurredAt));
 
   return { items };
@@ -73,31 +88,34 @@ export const POST = handleApi(async (req: Request) => {
   if (!userId) throw new UnauthorizedError("No user");
 
   // Get goal ID from URL
-  const id = req.url.split('/').slice(-2)[0];
+  const id = req.url.split("/").slice(-2)[0];
 
   // Verify goal ownership
   const own = await db.query.goals.findFirst({
     where: and(eq(goals.id, id), eq(goals.userId, userId)),
-    columns: { id: true, name: true, linkedAccountId: true }
+    columns: { id: true, name: true, linkedAccountId: true },
   });
   if (!own) throw new NotFoundError("Goal tidak ditemukan.");
 
   // Parse and validate request body
   const b = CreateBody.parse(await req.json());
-  const occurredAt = b.occurredAt || new Date().toISOString().split('T')[0];
+  const occurredAt = b.occurredAt || new Date().toISOString().split("T")[0];
 
   // Jika tidak ada transactionId, lanjut dengan flow normal (buat transaction baru)
   const userAcc = await db.query.accounts.findFirst({
     where: and(eq(accounts.id, b.accountId), eq(accounts.userId, userId)),
-    columns: { id: true }
+    columns: { id: true },
   });
   if (!userAcc) throw new BadRequestError("Rekening tidak valid.");
 
   // Validasi target account jika di-override
   if (b.targetAccountId) {
     const targetAcc = await db.query.accounts.findFirst({
-      where: and(eq(accounts.id, b.targetAccountId), eq(accounts.userId, userId)),
-      columns: { id: true }
+      where: and(
+        eq(accounts.id, b.targetAccountId),
+        eq(accounts.userId, userId),
+      ),
+      columns: { id: true },
     });
     if (!targetAcc) throw new BadRequestError("Rekening tujuan tidak valid.");
   }
@@ -105,7 +123,9 @@ export const POST = handleApi(async (req: Request) => {
   // Tentukan goal's linked account atau pakai override
   const goalAccountId = b.targetAccountId || own.linkedAccountId;
   if (!goalAccountId) {
-    throw new BadRequestError("Goal tidak memiliki rekening tujuan. Harap pilih rekening tujuan.");
+    throw new BadRequestError(
+      "Goal tidak memiliki rekening tujuan. Harap pilih rekening tujuan.",
+    );
   }
 
   const noteBase = b.note || "";
@@ -131,39 +151,63 @@ export const POST = handleApi(async (req: Request) => {
 
     // Insert transaction sebagai TRANSFER jika account berbeda
     if (txAccountId !== txTransferToAccountId && !b.transactionId) {
-      const [txn] = await tx.insert(transactions).values({
-        userId,
-        occurredAt: occurredAt,
-        amount: String(b.amount),
-        type: "transfer",
-        accountId: txAccountId,
-        transferToAccountId: txTransferToAccountId,
-        note: txNote,
-      }).returning({ id: transactions.id });
+      const [txn] = await tx
+        .insert(transactions)
+        .values({
+          userId,
+          occurredAt: occurredAt,
+          amount: String(b.amount),
+          type: "transfer",
+          accountId: txAccountId,
+          transferToAccountId: txTransferToAccountId,
+          note: txNote,
+        })
+        .returning({ id: transactions.id });
 
       transactionId = txn.id;
 
       // update account balance untuk transfer
-      await db
+      const [sourceUpdated] = await tx
         .update(accounts)
         .set({
           balance: sql`${accounts.balance} - ${b.amount}`,
         })
-        .where(eq(accounts.id, txAccountId));
+        .where(and(eq(accounts.id, txAccountId), eq(accounts.userId, userId)))
+        .returning({ id: accounts.id });
+      if (!sourceUpdated)
+        throw new BadRequestError(
+          "Rekening sumber tidak ditemukan saat memperbarui saldo.",
+        );
 
-      await db
+      const [destinationUpdated] = await tx
         .update(accounts)
         .set({
           balance: sql`${accounts.balance} + ${b.amount}`,
         })
-        .where(eq(accounts.id, txTransferToAccountId));
+        .where(
+          and(
+            eq(accounts.id, txTransferToAccountId),
+            eq(accounts.userId, userId),
+          ),
+        )
+        .returning({ id: accounts.id });
+      if (!destinationUpdated)
+        throw new BadRequestError(
+          "Rekening tujuan tidak ditemukan saat memperbarui saldo.",
+        );
     } else if (b.transactionId) {
       // Link ke transaction existing, pastikan valid
-      const existingTxn = await db.query.transactions.findFirst({
-        where: and(eq(transactions.id, b.transactionId), eq(transactions.userId, userId)),
-        columns: { id: true }
+      const existingTxn = await tx.query.transactions.findFirst({
+        where: and(
+          eq(transactions.id, b.transactionId),
+          eq(transactions.userId, userId),
+        ),
+        columns: { id: true },
       });
-      if (!existingTxn) throw new BadRequestError("Transaksi tidak ditemukan atau tidak valid.");
+      if (!existingTxn)
+        throw new BadRequestError(
+          "Transaksi tidak ditemukan atau tidak valid.",
+        );
 
       transactionId = existingTxn.id;
     } else {
